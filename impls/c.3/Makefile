@@ -7,4 +7,4 @@ step0_repl: step0_repl.c
 
 
 step1_read_print: step1_read_print.c
-    gcc -Wall step1_read_print.c -o step1_read_print
+	gcc -Wall step1_read_print.c -o step1_read_print

@@ -1,36 +1,46 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "linked_list.h"
 
 
-void print(node_t * node)
-{
-	if (node == NULL)
-	{
-		printf("\n");
+void append(node_t * head, void * new_data, size_t size) {
+	// if the data of head is empty, do not creat a new node.
+	if (head->data == NULL) {
+		// allocate data
+		head->data = malloc(size);
+		if (head->data == NULL) {
+			fprintf(stderr, "faild to allocate new data");
+		}
+		memcpy(head->data, new_data, size);
+		head->next = NULL;
 		return;
 	}
 
-	printf("%d ", node->data);
-
-	print(node->next);
-}
-
-void append(node_t ** head, int new_data)
-{
 	// allocate a new node
 	node_t * new_node;
 	new_node = (node_t *)malloc(sizeof(node_t));
-	new_node->next = (*head);
-	new_node->data = new_data;
+	if (new_node == NULL) {
+		fprintf(stderr, "faild to allocate new node");
+	}
 
-	*head = new_node;
+	// allocate data
+	new_node->data = malloc(size);
+	if (new_node->data == NULL) {
+		fprintf(stderr, "faild to allocate new data");
+	}
+	memcpy(new_node->data, new_data, size);
+	new_node->next = NULL;
+
+	node_t * node = head;
+	while (node->next != NULL) {
+		node = node->next;
+	}
+	node->next = new_node;
 }
 
-void pop(node_t ** head)
-{
-	if (*head == NULL || (*head)->next == NULL)
-	{
+void pop(node_t ** head) {
+	if (*head == NULL || (*head)->next == NULL) {
 		free(*head);
 		*head = NULL;
 		return;
@@ -40,38 +50,4 @@ void pop(node_t ** head)
 	new_head = (*head)->next;
 	free(*head);
 	(*head) = new_head;
-}
-
-int lenght(node_t * head)
-{
-	if (head == NULL)
-	{
-		return 0;
-	}
-
-	node_t * current_node = head;
-	int lenght = 1;
-
-	while (current_node->next != NULL)
-	{
-		current_node = current_node->next;
-		lenght += 1;
-	}
-
-	return lenght;
-}
-
-int in(node_t * head, int data)
-{
-	node_t * current = head;
-
-	while (current != NULL)
-	{
-		if (current->data == data)
-		{
-			return 1;
-		}
-		current = current->next;
-	}
-	return 0;
 }

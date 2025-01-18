@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "gc.h"
 #include "linked_list.h"
 
 
@@ -8,7 +9,7 @@ void append(node_t * head, void * new_data, size_t size) {
 	// if the data of head is empty, do not creat a new node.
 	if (head->data == NULL) {
 		// allocate data
-		head->data = malloc(size);
+		head->data = GC_MALLOC(size);
 		if (head->data == NULL) {
 			fprintf(stderr, "faild to allocate new data");
 		}
@@ -19,13 +20,13 @@ void append(node_t * head, void * new_data, size_t size) {
 
 	// allocate a new node
 	node_t * new_node;
-	new_node = (node_t *)malloc(sizeof(node_t));
+	new_node = (node_t *)GC_MALLOC(sizeof(node_t));
 	if (new_node == NULL) {
 		fprintf(stderr, "faild to allocate new node");
 	}
 
 	// allocate data
-	new_node->data = malloc(size);
+	new_node->data = GC_MALLOC(size);
 	if (new_node->data == NULL) {
 		fprintf(stderr, "faild to allocate new data");
 	}

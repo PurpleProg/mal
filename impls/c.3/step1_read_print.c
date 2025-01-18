@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include "gc.h"
 #include "reader.h"
 #include "linked_list.h"
 
@@ -14,6 +15,8 @@ int main(void) {
     char * line = NULL;
     size_t len = 0;
     ssize_t read;
+
+    GC_INIT();
 
     printf("user> ");
     while ((read = getline(&line, &len, stdin)) != -1) {
@@ -49,7 +52,8 @@ char* PRINT(node_t * tokens) {
         node = node->next;
     }
 
-    char * line = malloc(total_lenght + 1);
+    // allocate line
+    char * line = GC_MALLOC(total_lenght + 1);
     if (line == NULL) {
         fprintf(stderr, "cant allocate line buffer");
         return NULL;

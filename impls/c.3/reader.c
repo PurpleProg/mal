@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <pcre.h>
+#include "gc.h"
 #include "linked_list.h"
 
 
@@ -13,7 +14,6 @@ node_t * tokenize(char * string) {
 		printf("cant allocate tokens\n");
 		return NULL;
 	}
-
 	tokens->data = NULL;
 	tokens->next = NULL;
 
@@ -51,7 +51,7 @@ node_t * tokenize(char * string) {
 			printf("No match\n");
 		} else if (rc > 0) {
 			pcre_get_substring(string, ovector, rc, 1, &matched_string);
-			printf("DEBUG : token : '%s'\n", matched_string);
+			// printf("DEBUG : token : '%s'\n", matched_string);
 			append(tokens, matched_string, sizeof(matched_string));
 			pcre_free_substring(matched_string);
 		} else {

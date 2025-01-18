@@ -10,4 +10,4 @@ step0_repl: step0_repl.c
 
 
 step1_read_print: $(SRC)
-	gcc -Wall $(SRCS) -o step1_read_print -lpcre
+	gcc -Wall $(SRCS) -o step1_read_print -lpcre -lgc

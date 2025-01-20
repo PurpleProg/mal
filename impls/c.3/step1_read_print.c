@@ -2,12 +2,13 @@
 #include <string.h>
 #include "gc.h"
 #include "reader.h"
+#include "printer.h"
 #include "linked_list.h"
 
 
-node_t * READ(char * line);
-node_t * EVAL(node_t * tokens);
-char* PRINT(node_t * tokens);
+MalType * READ(char * line);
+MalType * EVAL(MalType * AST);
+char* PRINT(MalType * AST);
 char* rep(char * line);
 
 
@@ -30,44 +31,18 @@ int main(void) {
 }
 
 
-node_t * READ(char * line) {
-    return tokenize(line);
+MalType * READ(char * line) {
+    return read_str(line);
 }
 
 
-node_t * EVAL(node_t * tokens) {
-    return tokens;
+MalType * EVAL(MalType * AST) {
+    return AST;
 }
 
 
-char* PRINT(node_t * tokens) {
-    // PLACEHOLDER or something idk
-
-    int total_lenght = 0;
-    node_t * node = tokens;
-
-    // calc lenght of line
-    while (node != NULL) {
-        total_lenght += strlen((char *)node->data);
-        node = node->next;
-    }
-
-    // allocate line
-    char * line = GC_MALLOC(total_lenght + 1);
-    if (line == NULL) {
-        fprintf(stderr, "cant allocate line buffer");
-        return NULL;
-    }
-    line[0] = '\0';
-
-    // catenate tokens in line
-    node = tokens;
-    while (node != NULL) {
-        strcat(line, (char *)node->data);
-        node = node->next;
-    }
-
-    return line;
+char* PRINT(MalType * AST) {
+    return pr_str(AST);
 }
 
 

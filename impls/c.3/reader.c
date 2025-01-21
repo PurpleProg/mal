@@ -50,18 +50,18 @@ MalType * read_list(reader_t * reader) {
 	char * token = (char *)reader_next(reader)->data;
 	while (strcmp(token, ")") != 0) {
 
-		// if the tokens dont have a matching closing parentesis
-		// if we reach end of file
-		if (reader_peek(reader)->next == NULL) {
-			printf("missing closing )\n");
-			return list;
-		}
-
-
 		MalType * new_form = GC_malloc(sizeof(MalType));
 		new_form = read_form(reader);
 		// append the ret of read_form to the current MalList
 		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
+
+		// if the tokens dont have a matching closing parentesis
+		// if we reach end of file
+		if (reader_peek(reader)->next == NULL) {
+			printf("missing closing )\n");
+			printf("current (last) token : '%s'\n", (char *)reader_peek(reader)->data);
+			return list;
+		}
 
 		token = reader_next(reader)->data;
 	}
@@ -150,10 +150,15 @@ node_t * tokenize(char * string) {
 			printf("No match\n");
 		} else if (rc > 0) {
 			// syntax of before last arg
-			pcre_get_substring(string, ovector, rc, 0, &matched_string);
+			pcre_get_substring(string, ovector, rc, 1, &matched_string);
 
-			// printf("DEBUG : token : '%s'\n", matched_string);
-			append(tokens, (void * )matched_string, sizeof(matched_string));
+			if (*matched_string == ' ') {
+				// skip token if it is whitespace
+				start_offset = ovector[1];
+				continue;
+			}
+			printf("token : '%s'\n", matched_string);
+			append(tokens, (void * )matched_string, strlen(matched_string) + 1);
 
 			pcre_free_substring(matched_string);
 		} else {

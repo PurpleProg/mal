@@ -22,10 +22,12 @@ char * pr_str(MalType * AST) {
             node_t * node = AST->value.ListValue;
 
             strcat(string, "(");
-            while (node != NULL) {
+            while (node != NULL && node->data != NULL) {
                 strcat(string, pr_str((MalType *)node->data));
 
-                strcat(string, " ");
+                if (node->next != NULL) {
+                    strcat(string, " ");
+                }
                 node = node->next;
             }
             strcat(string, ")");

@@ -22,9 +22,9 @@ int main(void) {
     printf("user> ");
     while ((read = getline(&line, &len, stdin)) != -1) {
         // replace newline char wih string terminator
-        if (line[read - 1] == '\n') {
-            line[read -1] = '\0';
-        }
+        // if (line[read - 1] == '\n') {
+        //     line[read -1] = '\0';
+        // }
         printf("%s\n", rep(line));
         printf("user> ");
     }

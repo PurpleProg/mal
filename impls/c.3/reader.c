@@ -40,16 +40,32 @@ MalType * read_list(reader_t * reader) {
 	list->value.ListValue->next = NULL;
 	list->value.ListValue->data = NULL;
 
-	while (strcmp((char *)reader_next(reader)->data, ")") != 0) {
-		// reader_next(reader);
-		MalType * new_form = GC_malloc(sizeof(MalType));
-		new_form = read_atom(reader);
-		// append the ret of read_form to the current MalList
-		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
+	// handle single parentesis input
+	if (reader_peek(reader)->next == NULL) {
+		printf("only one token\n");
+		printf("how to do error handeling in C ?\n");
+		return list;
 	}
 
-	// TODO: think about empty list that skip the loop
-	// and thus list contain NULL somewhere idk im tired
+	char * token = (char *)reader_next(reader)->data;
+	while (strcmp(token, ")") != 0) {
+
+		// if the tokens dont have a matching closing parentesis
+		// if we reach end of file
+		if (reader_peek(reader)->next == NULL) {
+			printf("missing closing )\n");
+			return list;
+		}
+
+
+		MalType * new_form = GC_malloc(sizeof(MalType));
+		new_form = read_form(reader);
+		// append the ret of read_form to the current MalList
+		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
+
+		token = reader_next(reader)->data;
+	}
+
 	return list;
 }
 
@@ -82,7 +98,6 @@ node_t * reader_next(reader_t * reader) {
 	pop(&(reader->tokens));
 	return reader->tokens;
 }
-
 
 node_t * reader_peek(reader_t * reader) {
 	return reader->tokens;
@@ -134,7 +149,8 @@ node_t * tokenize(char * string) {
 		if (rc == PCRE_ERROR_NOMATCH) {
 			printf("No match\n");
 		} else if (rc > 0) {
-			pcre_get_substring(string, ovector, rc, 1, &matched_string);
+			// syntax of before last arg
+			pcre_get_substring(string, ovector, rc, 0, &matched_string);
 
 			// printf("DEBUG : token : '%s'\n", matched_string);
 			append(tokens, (void * )matched_string, sizeof(matched_string));

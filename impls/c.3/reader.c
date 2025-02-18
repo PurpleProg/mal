@@ -54,6 +54,9 @@ MalType * read_list(reader_t * reader) {
 		new_form = read_form(reader);
 		// append the ret of read_form to the current MalList
 		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
+		if (new_form->type == MAL_INT) {
+			printf("read : list appended %ld\n", *(new_form->value.IntValue));
+		}
 
 		// if the tokens dont have a matching closing parentesis
 		// if we reach end of file

@@ -1,5 +1,5 @@
 CFLAGS = -Wall -g
-SRCS = step1_read_print.c reader.c linked_list.c printer.c
+SRCS = step2_eval.c reader.c linked_list.c printer.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONNY: all clean
@@ -14,6 +14,9 @@ step0_repl: step0_repl.c
 	gcc -Wall step0_repl.c -o step0_repl
 
 step1_read_print: $(OBJS)
+	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
+
+step2_eval: $(OBJS)
 	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
 
 %.o: %.c

@@ -1,5 +1,5 @@
-CFLAGS = -Wall -g
-SRCS = step2_eval.c reader.c linked_list.c printer.c
+CFLAGS = -Wall -g -Wextra -pedantic -O1
+SRCS = step3_env.c reader.c linked_list.c printer.c hashmap.c env.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONNY: all clean
@@ -17,6 +17,9 @@ step1_read_print: $(OBJS)
 	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
 
 step2_eval: $(OBJS)
+	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
+
+step3_env: $(OBJS)
 	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
 
 %.o: %.c

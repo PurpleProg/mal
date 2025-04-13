@@ -8,6 +8,11 @@
 
 char * pr_str(MalType * AST) {
     char * string;
+    string = GC_malloc(1024); // TODO: dynamicly allocate this
+
+    if (AST == NULL) {
+        return string;
+    }
 
     switch (AST->type) {
         case MAL_INT:
@@ -18,10 +23,9 @@ char * pr_str(MalType * AST) {
         case MAL_SYMBOL:
             return AST->value.SymbolValue;
         case MAL_LIST:
-            string = GC_malloc(1024); // TODO: dynamicly allocate this
+            strcat(string, "(");
             node_t * node = AST->value.ListValue;
 
-            strcat(string, "(");
             while (node != NULL && node->data != NULL) {
                 strcat(string, pr_str((MalType *)node->data));
 
@@ -31,6 +35,9 @@ char * pr_str(MalType * AST) {
                 node = node->next;
             }
             strcat(string, ")");
+            return string;
+        case MAL_CORE_FN:
+            printf("WTF core function in AST in pr_str ???");
     }
 
     return string;

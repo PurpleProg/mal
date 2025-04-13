@@ -54,9 +54,9 @@ MalType * read_list(reader_t * reader) {
 		new_form = read_form(reader);
 		// append the ret of read_form to the current MalList
 		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
-		if (new_form->type == MAL_INT) {
-			printf("read : list appended %ld\n", *(new_form->value.IntValue));
-		}
+		// if (new_form->type == MAL_INT) {
+		// 	printf("read : list appended %ld\n", *(new_form->value.IntValue));
+		// }
 
 		// if the tokens dont have a matching closing parentesis
 		// if we reach end of file
@@ -160,7 +160,7 @@ node_t * tokenize(char * string) {
 				start_offset = ovector[1];
 				continue;
 			}
-			printf("token : '%s'\n", matched_string);
+			// printf("token : '%s'\n", matched_string);
 			append(tokens, (void * )matched_string, strlen(matched_string) + 1);
 
 			pcre_free_substring(matched_string);

@@ -6,6 +6,13 @@
 
 
 void append(node_t * head, void * new_data, size_t size) {
+	// if head is null create a new node
+	if (head == NULL) {
+		head = GC_MALLOC(sizeof(node_t));
+		head->data = NULL;
+		// this will fallback to the second check
+	}
+
 	// if the data of head is empty, do not creat a new node.
 	if (head->data == NULL) {
 		// allocate data

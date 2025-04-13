@@ -254,7 +254,6 @@ MalType * EVAL(MalType * AST, const Operation * repl_env) {
 }
 
 
-
 MalType * EVAL_symbol(MalType * AST, const Operation * repl_env) {
 	// NOTE: return the function from the repl env
 	const char * operator = AST->value.SymbolValue;

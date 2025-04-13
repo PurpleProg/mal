@@ -6,10 +6,11 @@
 typedef struct MalType MalType;
 
 typedef enum {
-	MAL_SYMBOL,
+    MAL_SYMBOL,
     MAL_INT,
     MAL_LIST,
     MAL_CORE_FN,
+    // MAL_NIL,
 } MalTypeEnum;
 
 typedef signed long MalInt;
@@ -22,6 +23,7 @@ typedef union {
     MalSymbol * SymbolValue;
     MalList * ListValue;
     MalCoreFn CoreFnValue;
+    // MalNil NilValue;
 } MalTypeValue;
 
 

@@ -7,7 +7,7 @@
 
 typedef struct env {
     struct env * outer;
-    map_t * map;
+    map_t * data;
 } env_t;
 
 

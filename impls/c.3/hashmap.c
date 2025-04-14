@@ -26,6 +26,7 @@ MalType * map_get(map_t * map, MalSymbol * key){
         // skip values
         current_node = current_node->next->next;
     }
+    printf("key : %s not found\n", key);
     return NULL;
 }
 

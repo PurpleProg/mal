@@ -38,6 +38,10 @@ char * pr_str(MalType * AST) {
             return string;
         case MAL_CORE_FN:
             printf("WTF core function in AST in pr_str ???");
+            return string;
+        case MAL_NIL:
+            printf("WTF NIL in AST in pr_str ???");
+            return string;
     }
 
     return string;

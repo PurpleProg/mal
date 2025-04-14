@@ -127,7 +127,7 @@ node_t * tokenize(char * string) {
 	// for pcre_exec
 	int rc;
 	int ovector[300];
-	int start_offset = 0;
+	size_t start_offset = 0;
 
 	// for pcre_get_substring
 	const char * matched_string;

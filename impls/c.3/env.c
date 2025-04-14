@@ -3,10 +3,14 @@
 
 
 int set(env_t * env, MalSymbol * key, MalType * value) {
-    return map_set(env->map, key, value);
+    return map_set(env->data, key, value);
 }
 
 
 MalType * get(env_t * env, MalSymbol * key){
-    return map_get(env->map, key);
+    MalType * ret =  map_get(env->data, key);
+    if (ret == NULL && env->outer != nil){
+        return get(env->outer, key);
+    }
+    return ret;
 }

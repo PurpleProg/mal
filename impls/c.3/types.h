@@ -1,6 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#define nil NULL
+
 #include "linked_list.h"
 
 typedef struct MalType MalType;
@@ -10,7 +12,7 @@ typedef enum {
     MAL_INT,
     MAL_LIST,
     MAL_CORE_FN,
-    // MAL_NIL,
+    MAL_NIL,
 } MalTypeEnum;
 
 typedef signed long MalInt;
@@ -23,7 +25,6 @@ typedef union {
     MalSymbol * SymbolValue;
     MalList * ListValue;
     MalCoreFn CoreFnValue;
-    // MalNil NilValue;
 } MalTypeValue;
 
 

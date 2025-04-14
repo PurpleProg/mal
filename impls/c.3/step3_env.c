@@ -187,8 +187,8 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			// special atoms
 			if ( ((MalType *)(element->data))->type == MAL_SYMBOL) {
 				MalSymbol * symbol = ((MalType *)(element->data))->value.SymbolValue;
+				// def!
 				if (strcmp(symbol, "def!") == 0) {
-					printf("special form !\n");
 					if (element->next == NULL) {
 						printf("def! shall take two args");
 						return AST;
@@ -198,9 +198,52 @@ MalType * EVAL(MalType * AST, env_t * env) {
 						return AST;
 					}
 					MalSymbol * key = ((MalType *)(element->next->data))->value.SymbolValue;
-					MalType * value = element->next->next->data;
+					MalType * value = EVAL(element->next->next->data, env);
 					set(env, key, value);
-					return AST;
+					return value;
+				}
+				// let*
+				if (strcmp(symbol, "let*") == 0) {
+					if (element->next == NULL) {
+						printf("let* shall take two args");
+						return AST;
+					}
+					if (element->next->next == NULL) {
+						printf("let* shall take two args");
+						return AST;
+					}
+
+					// create the new_env
+					env_t * new_env = GC_MALLOC(sizeof(env_t));
+					new_env->outer = env;
+					map_t * map = GC_MALLOC(sizeof(map_t));
+					new_env->data = map;
+
+					// eval the binding list
+					MalList * bindings_list = NULL;
+					if ( ((MalType *)(element->next->data))->type == MAL_LIST) {
+						bindings_list = ((MalType *)(element->next->data))->value.ListValue;
+					} else {
+						printf("let* takes a list as arg :/\n");
+						return AST;
+					}
+
+					node_t * binding = bindings_list;
+					while (binding != NULL){
+						if (binding->next == NULL) {
+							printf("binding list is odd\n");
+							return AST;
+						}
+
+						MalSymbol * key = ((MalType *)(binding->data))->value.SymbolValue;
+						MalType * value = EVAL(binding->next->data, new_env);
+						set(new_env, key, value);
+
+						binding = binding->next->next;
+					}
+
+					MalType * third_arg = EVAL(element->next->next->data, new_env);
+					return third_arg;
 				}
 			}
 			///////////////////////////////////

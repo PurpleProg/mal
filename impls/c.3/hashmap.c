@@ -7,8 +7,32 @@
 
 
 int map_set(map_t * map, MalSymbol * key, MalType * value){
-    append(map, key, sizeof(*key));
-    append(map, value, sizeof(*value));
+    if (map_contains(map, key)) {
+        node_t * current_node = map;
+        if (map == NULL) {
+            printf("map is null\n");
+        }
+        while (current_node != NULL){
+            // here data must be a MalSymbol (aka char *)
+            if (key == NULL) {
+                printf("key is null");
+            }
+            if (current_node->data == NULL) {
+                printf("data is null");
+            }
+            if (strcmp(key, current_node->data) == 0) {
+                // replace old value with new one
+                current_node->next->data = value;
+                return 0;
+            }
+            // skip values
+            current_node = current_node->next->next;
+        }
+
+    } else {
+        append(map, key, strlen(key) + 1);
+        append(map, value, sizeof(MalType));
+    }
     return 0;
 }
 
@@ -17,6 +41,11 @@ MalType * map_get(map_t * map, MalSymbol * key){
     node_t * current_node = map;
     if (map == NULL) {
         printf("map is null\n");
+        return NULL;
+    }
+    if (map->data == NULL) {
+        printf("map is empty\n");
+        return NULL;
     }
     while (current_node != NULL){
         // here data must be a MalSymbol (aka char *)
@@ -26,15 +55,19 @@ MalType * map_get(map_t * map, MalSymbol * key){
         // skip values
         current_node = current_node->next->next;
     }
-    printf("key : %s not found\n", key);
     return NULL;
 }
 
 int map_contains(map_t * map, MalSymbol * key){
     node_t * current_node = map;
     while (current_node != NULL){
+        if (current_node->data == NULL) {
+            // the map is empty
+            return 0;
+        }
         // here data must be a MalSymbol (aka char *)
-        if (strcmp(key, current_node->data)) {
+        // or is it ? spend hours because it was not (just why did i think it would be)
+        if (strcmp(key, current_node->data) == 0) {
             return 1;
         }
         // skip values
@@ -44,12 +77,12 @@ int map_contains(map_t * map, MalSymbol * key){
 }
 
 void map_remove(map_t * map, MalSymbol * key){
+    // not tested at all probably broken somehow but hey i dont need it yet
     node_t * current_node = map;
     while (current_node != NULL){
         if (current_node->data == key) {
             // skip the k/v pair to be removed, gc will dealocate (thanks)
-            current_node = current_node->next->next;
-            return;
+            break;
         }
         // skip values
         current_node = current_node->next->next;

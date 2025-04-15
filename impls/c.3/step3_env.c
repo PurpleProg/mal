@@ -138,13 +138,6 @@ int main(void) {
 	Mal_divide->type = MAL_CORE_FN;
 	Mal_divide->value.CoreFnValue = (MalCoreFn)&divide;
 
-	// const Operation repl_env[] = {
-	// {'+', Mal_add},
-	// {'-', Mal_sub},
-	// {'*', Mal_mult},
-	// {'/', Mal_divide},
-	// }
-
 	env_t * repl_env = GC_MALLOC(sizeof(env_t));
 	repl_env->data = GC_MALLOC(sizeof(map_t));
 	repl_env->outer = nil;
@@ -172,15 +165,18 @@ MalType * EVAL(MalType * AST, env_t * env) {
 	}
 	switch (AST->type) {
 		case MAL_SYMBOL: {
-			return EVAL_symbol(AST, env);
+			// NOTE: return the function from the repl env
+			MalSymbol * symbol = AST->value.SymbolValue;
+			return get(env, symbol);
+//			return EVAL_symbol(AST, env);
+		}
 		case MAL_LIST: {
 			// NOTE: call the function from the first element
 			// and pass the rest of the list as args
 			node_t * element = AST->value.ListValue;
 			// if the list is empty
 			if (element->data == NULL) {
-				printf("list is empty\n");
-				return AST;
+				return NULL;
 			}
 
 			//////////////////////////////
@@ -199,7 +195,9 @@ MalType * EVAL(MalType * AST, env_t * env) {
 					}
 					MalSymbol * key = ((MalType *)(element->next->data))->value.SymbolValue;
 					MalType * value = EVAL(element->next->next->data, env);
-					set(env, key, value);
+					if (value != NULL) {
+						set(env, key, value);
+					}
 					return value;
 				}
 				// let*
@@ -219,15 +217,16 @@ MalType * EVAL(MalType * AST, env_t * env) {
 					map_t * map = GC_MALLOC(sizeof(map_t));
 					new_env->data = map;
 
-					// eval the binding list
+					// define the binding list
 					MalList * bindings_list = NULL;
 					if ( ((MalType *)(element->next->data))->type == MAL_LIST) {
 						bindings_list = ((MalType *)(element->next->data))->value.ListValue;
 					} else {
 						printf("let* takes a list as arg :/\n");
-						return AST;
+						return NULL;
 					}
 
+					// evaluate the binding list
 					node_t * binding = bindings_list;
 					while (binding != NULL){
 						if (binding->next == NULL) {
@@ -236,9 +235,10 @@ MalType * EVAL(MalType * AST, env_t * env) {
 						}
 
 						MalSymbol * key = ((MalType *)(binding->data))->value.SymbolValue;
-						MalType * value = EVAL(binding->next->data, new_env);
-						set(new_env, key, value);
-
+						MalType * value = EVAL((MalType *)binding->next->data, new_env);
+						if (value != NULL) {
+							set(new_env, key, value);
+						}
 						binding = binding->next->next;
 					}
 
@@ -251,11 +251,14 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			// calling eval on the first element of the list should return a MalCoreFn
 			MalType * operation = EVAL(element->data, env);
 			if (operation == NULL) {
-				printf("operator returned NULL ");
-				return AST;
+				return NULL;
 			}
 			if (operation->type != MAL_CORE_FN) {
 				fprintf(stderr, "first element of list is not operator\n");
+				return AST;
+			}
+			if (operation->value.CoreFnValue == NULL) {
+				fprintf(stderr, "operation is null\n");
 				return AST;
 			}
 			// skip symbol
@@ -267,23 +270,17 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			}
 
 			// print the rest of the list elements
-			node_t * copy = element->next;
-			while (copy != NULL) {
-				// MalType * thing = copy->data;
-				// printf("element : %ld\n", *(thing->value.IntValue));
-				copy = copy->next;
-			}
+			// node_t * copy = element;
+			// while (copy != NULL) {
+			// 	MalType * args = copy->data;
+			// 	printf("args : %ld\n", *(args->value.IntValue));
+			// 	copy = copy->next;
+			// }
 
 			// add the rest of the list to a list of evaluated things
 			node_t * list = GC_MALLOC(sizeof(node_t));
 			while (element != NULL) {
 				MalType * evaluated_element = EVAL(element->data, env);
-				//
-				// if (evaluated_element->type == MAL_INT) {
-				//	 printf("element added to list : %ld\n",  *(evaluated_element->value.IntValue));
-				// } else {
-				//	 printf("evaluated elent is not a int \n");
-				// }
 				if (evaluated_element != NULL) {
 					append(list, (void *)evaluated_element->value.IntValue, sizeof(signed long));
 				}
@@ -293,15 +290,19 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			MalType * result = (*(MalCoreFn)operation->value.CoreFnValue)(list);
 			return result;
 
-			case MAL_INT:
-				return AST;
-				case MAL_CORE_FN:
-					// idk switch shall handle every posible enum soooo
-					fprintf(stderr, "CORE_FN in AST ???");
-					case MAL_NIL:
-						// idk switch shall handle every posible enum soooo
-						fprintf(stderr, "NIL in AST ???");
 		}
+		case MAL_INT: {
+			return AST;
+		}
+		case MAL_CORE_FN: {
+			// idk switch shall handle every posible enum soooo
+			fprintf(stderr, "CORE_FN in AST ???");
+			return AST;
+		}
+		case MAL_NIL: {
+			// idk switch shall handle every posible enum soooo
+			fprintf(stderr, "NIL in AST ???");
+			return AST;
 		}
 	}
 

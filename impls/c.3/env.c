@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "types.h"
 #include "env.h"
 
@@ -11,6 +12,9 @@ MalType * get(env_t * env, MalSymbol * key){
     MalType * ret =  map_get(env->data, key);
     if (ret == NULL && env->outer != nil){
         return get(env->outer, key);
+    }
+    if (ret == NULL && env->outer == nil) {
+        printf("key : %s not found\n", key);
     }
     return ret;
 }

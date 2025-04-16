@@ -3,6 +3,7 @@
 #include <string.h>
 #include "gc.h"
 #include "linked_list.h"
+#include "printer.h"
 
 
 void append(node_t * head, void * new_data, size_t size) {

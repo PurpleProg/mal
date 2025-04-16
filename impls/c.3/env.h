@@ -2,15 +2,9 @@
 #define ENV_H
 
 #include "types.h"
-#include "hashmap.h"
 
 
-typedef struct env {
-    struct env * outer;
-    map_t * data;
-} env_t;
-
-
+env_t * create_env(env_t * outer, node_t * binds, node_t * exprs);
 int set(env_t * env, MalSymbol * key, MalType * value);
 MalType * get(env_t * env, MalSymbol * key);
 

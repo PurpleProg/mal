@@ -5,6 +5,7 @@
 
 
 char * pr_str(MalType * AST);
+char * pr_env(env_t * ent);
 
 
 #endif

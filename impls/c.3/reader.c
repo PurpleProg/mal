@@ -25,16 +25,23 @@ MalType * read_form(reader_t * reader) {
 	// dereferencing token to get the first char
 	switch (*token) {
 		case '(':
-			return read_list(reader);
+			return read_list(reader, 0);
+		case '[':
+			return read_list(reader, 1);
+		//case '"':
+			//return read_list(reader, 1);
 		default:
 			return read_atom(reader);
 	}
 }
 
-MalType * read_list(reader_t * reader) {
-
+MalType * read_list(reader_t * reader, int vector) {
 	MalType * list = GC_malloc(sizeof(MalType));
-	list->type = MAL_LIST;
+	if (vector == 1) {
+		list->type = MAL_VECTOR;
+	} else {
+		list->type = MAL_LIST;
+	}
 	list->value.ListValue = GC_malloc(sizeof(MalList));
 
 	list->value.ListValue->next = NULL;
@@ -48,7 +55,13 @@ MalType * read_list(reader_t * reader) {
 	}
 
 	char * token = (char *)reader_next(reader)->data;
-	while (strcmp(token, ")") != 0) {
+	char * end_token;
+	if (vector == 1) {
+		end_token = "]";
+	} else {
+		end_token = ")";
+	}
+	while (strcmp(token, end_token) != 0) {
 
 		MalType * new_form = GC_malloc(sizeof(MalType));
 		new_form = read_form(reader);
@@ -72,6 +85,7 @@ MalType * read_list(reader_t * reader) {
 	return list;
 }
 
+
 MalType * read_atom(reader_t * reader) {
 	MalType * atom = GC_malloc(sizeof(MalType));
 
@@ -83,13 +97,23 @@ MalType * read_atom(reader_t * reader) {
 		atom->type = MAL_INT;
 		atom->value.IntValue = GC_malloc(sizeof(MalInt));
 		*atom->value.IntValue = number;
-	} else {
-		// token is not a number (i hope)
-		// for now if it's not a number it must be a symbol
-		atom->type = MAL_SYMBOL;
-		atom->value.SymbolValue = GC_malloc(sizeof(MalSymbol));
-		memcpy(atom->value.SymbolValue, token, strlen(token));
+		return atom;
 	}
+	// token is not a number
+	if (*token == '"') {
+		//remove surrounding "
+		token += sizeof(char);
+		token[strlen(token) -1 ] = '\0';
+
+		atom->type = MAL_STRING;
+		atom->value.StringValue = GC_malloc(sizeof(MalString));
+		memcpy(atom->value.StringValue, token, strlen(token));
+		return atom;
+	}
+	// if token is not a number nor a string, it's a symbol
+	atom->type = MAL_SYMBOL;
+	atom->value.SymbolValue = GC_malloc(sizeof(MalSymbol));
+	memcpy(atom->value.SymbolValue, token, strlen(token));
 
 	return atom;
 }
@@ -160,6 +184,7 @@ node_t * tokenize(char * string) {
 				start_offset = ovector[1];
 				continue;
 			}
+			// DEBUG:
 			// printf("token : '%s'\n", matched_string);
 			append(tokens, (void * )matched_string, strlen(matched_string) + 1);
 

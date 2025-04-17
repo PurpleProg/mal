@@ -15,41 +15,70 @@ char * pr_str(MalType * AST) {
     }
 
     switch (AST->type) {
-        case MAL_INT:
+        case MAL_INT: {
             string = GC_malloc(sizeof(MalInt));
-            sprintf(string, "%ld", *AST->value.IntValue);
-            return string;
-        case MAL_SYMBOL:
+       sprintf(string, "%ld", *AST->value.IntValue);
+       return string;
+        }
+        case MAL_SYMBOL: {
             return AST->value.SymbolValue;
-        case MAL_LIST:
-            strcat(string, "(");
-            node_t * node = AST->value.ListValue;
-
-            while (node != NULL && node->data != NULL) {
-                strcat(string, pr_str((MalType *)node->data));
-
-                if (node->next != NULL) {
-                    strcat(string, " ");
-                }
-                node = node->next;
-            }
-            strcat(string, ")");
+        }
+        case MAL_STRING: {
+            strcat(string, "\"");
+            strcat(string, AST->value.StringValue);
+            strcat(string, "\"");
             return string;
-        case MAL_CORE_FN:
+        }
+        case MAL_LIST: {
+            strcat(string, "(");
+       node_t * node = AST->value.ListValue;
+
+       while (node != NULL && node->data != NULL) {
+           strcat(string, pr_str((MalType *)node->data));
+
+       if (node->next != NULL) {
+           strcat(string, " ");
+       }
+       node = node->next;
+       }
+       strcat(string, ")");
+       return string;
+        }
+        case MAL_VECTOR: {
+            strcat(string, "[");
+       node_t * node = AST->value.ListValue;
+
+       while (node != NULL && node->data != NULL) {
+           strcat(string, pr_str((MalType *)node->data));
+
+       if (node->next != NULL) {
+           strcat(string, " ");
+       }
+       node = node->next;
+       }
+       strcat(string, "]");
+       return string;
+        }
+        case MAL_CORE_FN: {
             strcat(string, "#<core function>");
             return string;
-        case MAL_FN:
+        }
+        case MAL_FN: {
             strcat(string, "#<function>");
             return string;
-        case MAL_NIL:
+        }
+        case MAL_NIL: {
             strcat(string, "nil");
             return string;
-        case MAL_TRUE:
+        }
+        case MAL_TRUE: {
             strcat(string, "true");
             return string;
-        case MAL_FALSE:
+        }
+        case MAL_FALSE: {
             strcat(string, "false");
             return string;
+        }
     }
 
     return string;

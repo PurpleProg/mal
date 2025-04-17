@@ -11,6 +11,8 @@ typedef enum {
     MAL_SYMBOL,
     MAL_INT,
     MAL_LIST,
+    MAL_VECTOR,
+    MAL_STRING,
     MAL_CORE_FN,
     MAL_FN,
     MAL_NIL,
@@ -26,6 +28,7 @@ typedef struct MalFn MalFn;
 typedef int MalTrue;
 typedef int MalFalse;
 typedef int MalNil;
+typedef char MalString;
 
 typedef union {
     MalInt * IntValue;
@@ -36,6 +39,7 @@ typedef union {
     MalTrue * TrueValue;
     MalFalse * FalseValue;
     MalNil * NilValue;
+    MalString * StringValue;
 } MalTypeValue;
 
 

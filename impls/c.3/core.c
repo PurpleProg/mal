@@ -236,6 +236,38 @@ MalType * equal(node_t * node) {
     }
     switch (arg1->type) {
         // types are the same, so singletones (true false nil) can return true directly
+        case MAL_VECTOR: {
+            node_t * node1 = arg1->value.ListValue;
+            node_t * node2 = arg2->value.ListValue;
+            while (node1 != NULL && node2 != NULL) {
+                // if two elements are empty:
+                if (node1->data == NULL && node2->data == NULL) {
+                    return true;
+                } else if (node1->data == NULL || node2->data == NULL) {
+                    // lenght are different
+                    return false;
+                }
+
+                node_t * zipped = GC_MALLOC(sizeof(node_t));
+                zipped->data = NULL;
+                zipped->next = NULL;
+                append(zipped, node1->data, sizeof(MalType));
+                append(zipped, node2->data, sizeof(MalType));
+
+
+
+                if (equal(zipped)->type == MAL_FALSE) {
+                    return false;
+                }
+                node1 = node1->next;
+                node2 = node2->next;
+            }
+            // if lenght are different
+            if ((node1 == NULL) ^ (node2 == NULL)) {
+                return false;
+            }
+            return true;
+        }
         case MAL_LIST: {
             node_t * node1 = arg1->value.ListValue;
             node_t * node2 = arg2->value.ListValue;
@@ -280,6 +312,15 @@ MalType * equal(node_t * node) {
         case MAL_TRUE: {return true;}
         case MAL_FALSE: {return true;}
         case MAL_NIL: {return true;}
+        case MAL_STRING: {
+            char * string1 = arg1->value.StringValue;
+            char * string2 = arg2->value.StringValue;
+            if (strcmp(string1, string2) == 0) {
+                return true;
+            }
+            return false;
+
+        }
         case MAL_SYMBOL: {
             char * symbol1 = arg1->value.SymbolValue;
             char * symbol2 = arg2->value.SymbolValue;

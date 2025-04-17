@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "gc.h"
+#include "types.h"
+#include "core.h"
 #include "reader.h"
 #include "printer.h"
-#include "types.h"
 #include "linked_list.h"
 #include "hashmap.h"
 #include "env.h"
@@ -14,103 +15,6 @@ MalType * EVAL(MalType * AST, env_t * env);
 char* PRINT(MalType * AST);
 char* rep(char * line, env_t * env);
 
-MalType * EVAL_symbol(MalType * AST, env_t * env);
-
-MalType * add(node_t * node) {
-	// add a list of signed long
-	if (node == NULL) {
-		fprintf(stderr, "list is empty\n");
-		return 0;
-	}
-
-	signed long result = 0;
-	do {
-		result += *(signed long *)(node->data);
-		node = node->next;
-	} while (node != NULL);
-
-	MalType * MalResult = GC_MALLOC(sizeof(MalType));
-	MalResult->type = MAL_INT;
-	MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-	memcpy(MalResult->value.IntValue, &result, sizeof(result));
-	return MalResult;
-}
-MalType * sub(node_t * node) {
-	// sub a list of signed long
-	if (node == NULL) {
-		fprintf(stderr, "list is empty\n");
-		return 0;
-	}
-
-	signed long result = *(signed long *)(node->data);
-	node = node->next;
-
-	if (node == NULL) {
-		fprintf(stderr, "at least two number pls\n");
-		return 0;
-	}
-
-	do {
-		result -= *(signed long *)(node->data);
-		node = node->next;
-	} while (node != NULL);
-
-	MalType * MalResult = GC_MALLOC(sizeof(MalType));
-	MalResult->type = MAL_INT;
-	MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-
-	memcpy(MalResult->value.IntValue, &result, sizeof(result));
-	return MalResult;
-}
-MalType * mult(node_t * node) {
-	// mult a list of signed long
-	if (node == NULL) {
-		   fprintf(stderr, "list is empty\n");
-	   return 0;
-	   }
-
-	   signed long result = 1;
-	   do {
-		   result *= *(signed long *)(node->data);
-	   node = node->next;
-	   } while (node != NULL);
-
-	   MalType * MalResult = GC_MALLOC(sizeof(MalType));
-	   MalResult->type = MAL_INT;
-	   MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-	   memcpy(MalResult->value.IntValue, &result, sizeof(result));
-	   return MalResult;
-}
-MalType * divide(node_t * node) {
-	// divide two of signed long
-	if (node == NULL) {
-		   fprintf(stderr, "list is empty\n");
-	   return 0;
-	   }
-
-	   signed long result = 0;
-
-	   if (node->next == NULL) {
-		   printf("divide must take two arg (not 0)");
-	   return 0;
-	   } else if (node->next == NULL){
-		   printf("divide must take two arg (not 1)");
-	   return 0;
-	   } //else if (node->next->next->next != NULL) {
-
-	   signed long a = *(signed long *)(node->data);
-	   signed long b = *(signed long *)(node->next->data);
-
-	   // printf("a : %ld, b : %ld\n", a, b);
-	   result = a / b;
-
-	   MalType * MalResult = GC_MALLOC(sizeof(MalType));
-	   MalResult->type = MAL_INT;
-	   MalResult->value.IntValue = (MalInt *)GC_MALLOC(sizeof(MalInt));
-	   memcpy(MalResult->value.IntValue, &result, sizeof(result));
-	   return MalResult;
-}
-
 
 int main(void) {
 	GC_INIT();
@@ -118,33 +22,7 @@ int main(void) {
 	size_t len = 0;
 	ssize_t read;
 
-	// make add a MalType
-	MalType * Mal_add = GC_MALLOC(sizeof(MalType));
-	Mal_add->type = MAL_CORE_FN;
-	Mal_add->value.CoreFnValue = (MalCoreFn)&add;
-
-	// make sub a MalType
-	MalType * Mal_sub = GC_MALLOC(sizeof(MalType));
-	Mal_sub->type = MAL_CORE_FN;
-	Mal_sub->value.CoreFnValue = (MalCoreFn)&sub;
-
-	// make mult a MalType
-	MalType * Mal_mult = GC_MALLOC(sizeof(MalType));
-	Mal_mult->type = MAL_CORE_FN;
-	Mal_mult->value.CoreFnValue = (MalCoreFn)&mult;
-
-	// make divide a MalType
-	MalType * Mal_divide = GC_MALLOC(sizeof(MalType));
-	Mal_divide->type = MAL_CORE_FN;
-	Mal_divide->value.CoreFnValue = (MalCoreFn)&divide;
-
-	env_t * repl_env = create_env(NULL, NULL, NULL);
-
-	set(repl_env, "+", Mal_add);
-	set(repl_env, "-", Mal_sub);
-	set(repl_env, "*", Mal_mult);
-	set(repl_env, "/", Mal_divide);
-
+	env_t * repl_env = create_repl();
 	printf("%s", pr_env(repl_env));
 
 	printf("user> ");
@@ -194,7 +72,7 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			node_t * element = AST->value.ListValue;
 			// if the list is empty
 			if (element->data == NULL) {
-				return NULL;
+				return AST;
 			}
 
 			//////////////////////////////
@@ -323,8 +201,10 @@ MalType * EVAL(MalType * AST, env_t * env) {
 					// create_env expect a MalList of (char * || MalSymbol *)
 					// convert it
 					MalList * formated_parameters = GC_MALLOC(sizeof(MalList));
+					formated_parameters->data = NULL;
+					formated_parameters->next = NULL;
 					node_t * current_node = parameters;
-					while (current_node != NULL) {
+					while (current_node != NULL && current_node->data != NULL) {
 						if (((MalType *)current_node->data)->type != MAL_SYMBOL) {
 							printf("args must be symbols\n");
 							return NULL;
@@ -356,7 +236,6 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			}
 			MalType * evaluated_first_element = EVAL(first_element, env);
 			if (evaluated_first_element == NULL) {
-				printf("EVAL first element returned NULL\n");
 				return AST;
 			}
 			if ( evaluated_first_element->type == MAL_FN) {
@@ -364,21 +243,19 @@ MalType * EVAL(MalType * AST, env_t * env) {
 				if (element->next == NULL) {
 					return AST;
 				}
-				MalType * args = element->next->data;
 				MalList * arg_list = GC_MALLOC(sizeof(MalList));
 				arg_list->data = NULL;
 				arg_list->next = NULL;
 				// normalize arg into a MalList
 
-				if (((MalType *)element->next->data)->type == MAL_LIST){
-					arg_list = ((MalType *)element->next->data)->value.ListValue;
-				} else {
-					node_t * node = element->next;
-					while (node != NULL) {
-						MalType * arg = node->data;
-						append(arg_list, arg, sizeof(MalType));
-						node = node->next;
+				node_t * node = element->next;
+				while (node != NULL) {
+					MalType * arg = node->data;
+					if (arg->type == MAL_LIST) {
+						arg = EVAL(arg, env);
 					}
+					append(arg_list, arg, sizeof(MalType));
+					node = node->next;
 				}
 
 				// wrap the MalList * arg list into a MalType
@@ -401,7 +278,6 @@ MalType * EVAL(MalType * AST, env_t * env) {
 				return NULL;
 			}
 			if (operation->type != MAL_CORE_FN) {
-				fprintf(stderr, "first element of list is not operator\n");
 				return AST;
 			}
 			if (operation->value.CoreFnValue == NULL) {
@@ -409,12 +285,8 @@ MalType * EVAL(MalType * AST, env_t * env) {
 				return AST;
 			}
 			// skip symbol
-			if (element->next != NULL) {
-				element = element->next;
-			} else {
-				printf("list only contain one symbol");
-				return AST;
-			}
+			// this can make element NULL
+			element = element->next;
 
 			// print the rest of the list elements
 			// node_t * copy = element;
@@ -426,10 +298,12 @@ MalType * EVAL(MalType * AST, env_t * env) {
 
 			// add the rest of the list to a list of evaluated things
 			node_t * list = GC_MALLOC(sizeof(node_t));
+			list->data = NULL;
+			list->next = NULL;
 			while (element != NULL) {
 				MalType * evaluated_element = EVAL(element->data, env);
 				if (evaluated_element != NULL) {
-					append(list, (void *)evaluated_element->value.IntValue, sizeof(signed long));
+					append(list, (void *)evaluated_element, sizeof(MalType));
 				}
 				element = element->next;
 			};
@@ -451,8 +325,6 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			return AST;
 		}
 		case MAL_CORE_FN: {
-			// idk switch shall handle every posible enum soooo
-			fprintf(stderr, "CORE_FN in AST ???");
 			return AST;
 		}
 		case MAL_FN: {

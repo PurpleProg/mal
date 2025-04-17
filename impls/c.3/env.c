@@ -31,7 +31,10 @@ env_t * create_env(env_t * outer, node_t * binds, node_t * exprs) {
         env->outer = outer;
     }
 
-    if (binds == NULL && exprs == NULL) {
+    if (binds == NULL || exprs == NULL) {
+        return env;
+    }
+    if (binds->data == NULL || exprs->data == NULL) {
         return env;
     }
     while (binds != NULL && exprs != NULL) {

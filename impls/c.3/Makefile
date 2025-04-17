@@ -1,10 +1,13 @@
 CFLAGS = -Wall -g -Wextra -pedantic -O1
-SRCS = step4_if_fn_do.c reader.c linked_list.c printer.c hashmap.c env.c
+SRCS = step4_if_fn_do.c core.c reader.c linked_list.c printer.c hashmap.c env.c
+# SRCS = $(wildcard *.c)
+# EXCLUDED_SRCS = step0_repl.c, step1_read_print.c, step2_eval.c, step3_env.c
+# SRCS = $(filter-out $(EXCLUDED_SRCS), $(ALL_SRCS))
 OBJS = $(SRCS:.c=.o)
 
 .PHONNY: all clean
 
-all: step1_read_print
+all: step4_if_fn_do
 
 clean:
 	rm -f $(OBJS)

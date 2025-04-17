@@ -42,7 +42,7 @@ char * pr_str(MalType * AST) {
             strcat(string, "#<function>");
             return string;
         case MAL_NIL:
-            strcat(string, "#<nil>");
+            strcat(string, "nil");
             return string;
         case MAL_TRUE:
             strcat(string, "true");

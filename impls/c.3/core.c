@@ -102,12 +102,7 @@ MalType * prn(node_t * node) {
     nil->type = MAL_NIL;
     nil->value.NilValue = NULL;
 
-    if (node->next == NULL) {
-        printf("prn need an arg\n");
-        return nil;
-    }
     if (node->data == NULL) {
-        fprintf(stderr, "list is empty\n");
         return nil;
     }
 
@@ -115,6 +110,14 @@ MalType * prn(node_t * node) {
     return nil;
 }
 MalType * list(node_t * node) {
+    if (node->data == NULL) {
+        // list is empty, allocate a new one
+        node_t * new_list = GC_MALLOC(sizeof(node_t));
+        new_list->next = NULL;
+        new_list->data = NULL;
+        node = new_list;
+    }
+
     MalType * ret = GC_MALLOC(sizeof(MalType));
     ret->type = MAL_LIST;
     ret->value.ListValue = node;
@@ -167,14 +170,14 @@ MalType * count(node_t * node) {
     *(ret->value.IntValue) = 0;
 
     node_t * new_node = GC_MALLOC(sizeof(node_t));
-	if (node->data == NULL) {
-   // arg is empty
+    if (node->data == NULL) {
+        // arg is empty
         *(ret->value.IntValue) = -1;
         return ret;
     }
     if ( ! (((MalType *)node->data)->type == MAL_LIST)) {
-        printf("count only work for list\n");
-        *(ret->value.IntValue) = -1;
+        // printf("count only work for list\n");
+        *(ret->value.IntValue) = 0;
         return ret;
     }
 
@@ -237,11 +240,23 @@ MalType * equal(node_t * node) {
             node_t * node1 = arg1->value.ListValue;
             node_t * node2 = arg2->value.ListValue;
             while (node1 != NULL && node2 != NULL) {
-                // build a new node for recursive equal call
-                node_t * node = GC_MALLOC(sizeof(node_t));
-                node = node1;
-                node->next = node2;
-                if (! equal(node)) {
+                // if two elements are empty:
+                if (node1->data == NULL && node2->data == NULL) {
+                    return true;
+                } else if (node1->data == NULL || node2->data == NULL) {
+                    // lenght are different
+                    return false;
+                }
+
+                node_t * zipped = GC_MALLOC(sizeof(node_t));
+                zipped->data = NULL;
+                zipped->next = NULL;
+                append(zipped, node1->data, sizeof(MalType));
+                append(zipped, node2->data, sizeof(MalType));
+
+
+
+                if (equal(zipped)->type == MAL_FALSE) {
                     return false;
                 }
                 node1 = node1->next;
@@ -330,11 +345,179 @@ MalType * equal(node_t * node) {
     *(int *) a = 1;
     return false;
 }
-//
-// MalType * less(node_t * node) {}
-// MalType * more(node_t * node) {}
-// MalType * equal_less(node_t * node) {}
-// MalType * equal_more(node_t * node) {}
+
+MalType * less(node_t * node) {
+    MalType * false = GC_MALLOC(sizeof(MalType));
+    false->type = MAL_FALSE;
+    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    *false->value.FalseValue = 0;
+
+    MalType * true = GC_MALLOC(sizeof(MalType));
+    true->type = MAL_TRUE;
+    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    *true->value.TrueValue = 0;
+
+    if (node == NULL) {
+        printf("< with no arg \n");
+        return NULL;
+    }
+    if (node->data == NULL) {
+        printf("< arg1 is NULL \n");
+        return NULL;
+    }
+    if (node->next == NULL) {
+        printf("< with only one arg\n");
+        return NULL;
+    }
+    if (node->next->data == NULL) {
+        printf("< arg2 is NULL \n");
+        return NULL;
+    }
+
+    // maybe i dont need to allocate new memory here ?
+    MalType * arg1 = GC_MALLOC(sizeof(MalType));
+    MalType * arg2 = GC_MALLOC(sizeof(MalType));
+    arg1 = node->data;
+    arg2 = node->next->data;
+
+    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+        printf("< with non int parameters\n");
+        return NULL;
+    }
+    if (*arg1->value.IntValue < *arg2->value.IntValue) {
+        return true;
+    }
+    return false;
+}
+MalType * more(node_t * node) {
+    MalType * false = GC_MALLOC(sizeof(MalType));
+    false->type = MAL_FALSE;
+    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    *false->value.FalseValue = 0;
+
+    MalType * true = GC_MALLOC(sizeof(MalType));
+    true->type = MAL_TRUE;
+    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    *true->value.TrueValue = 0;
+
+    if (node == NULL) {
+        printf("> with no arg \n");
+        return NULL;
+    }
+    if (node->data == NULL) {
+        printf("> arg1 is NULL \n");
+        return NULL;
+    }
+    if (node->next == NULL) {
+        printf("> with only one arg\n");
+        return NULL;
+    }
+    if (node->next->data == NULL) {
+        printf("> arg2 is NULL \n");
+        return NULL;
+    }
+
+    // maybe i dont need to allocate new memory here ?
+    MalType * arg1 = GC_MALLOC(sizeof(MalType));
+    MalType * arg2 = GC_MALLOC(sizeof(MalType));
+    arg1 = node->data;
+    arg2 = node->next->data;
+
+    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+        printf("> with non int parameters\n");
+        return NULL;
+    }
+    if (*arg1->value.IntValue > *arg2->value.IntValue) {
+        return true;
+    }
+    return false;
+}
+MalType * equal_less(node_t * node) {
+    MalType * false = GC_MALLOC(sizeof(MalType));
+    false->type = MAL_FALSE;
+    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    *false->value.FalseValue = 0;
+
+    MalType * true = GC_MALLOC(sizeof(MalType));
+    true->type = MAL_TRUE;
+    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    *true->value.TrueValue = 0;
+
+    if (node == NULL) {
+        printf("<= with no arg \n");
+        return NULL;
+    }
+    if (node->data == NULL) {
+        printf("<= arg1 is NULL \n");
+        return NULL;
+    }
+    if (node->next == NULL) {
+        printf("<= with only one arg\n");
+        return NULL;
+    }
+    if (node->next->data == NULL) {
+        printf("<= arg2 is NULL \n");
+        return NULL;
+    }
+
+    // maybe i dont need to allocate new memory here ?
+    MalType * arg1 = GC_MALLOC(sizeof(MalType));
+    MalType * arg2 = GC_MALLOC(sizeof(MalType));
+    arg1 = node->data;
+    arg2 = node->next->data;
+
+    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+        printf("<= with non int parameters\n");
+        return NULL;
+    }
+    if (*arg1->value.IntValue <= *arg2->value.IntValue) {
+        return true;
+    }
+    return false;
+}
+MalType * equal_more(node_t * node) {
+    MalType * false = GC_MALLOC(sizeof(MalType));
+    false->type = MAL_FALSE;
+    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    *false->value.FalseValue = 0;
+
+    MalType * true = GC_MALLOC(sizeof(MalType));
+    true->type = MAL_TRUE;
+    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    *true->value.TrueValue = 0;
+
+    if (node == NULL) {
+        printf(">= with no arg \n");
+        return NULL;
+    }
+    if (node->data == NULL) {
+        printf(">= arg1 is NULL \n");
+        return NULL;
+    }
+    if (node->next == NULL) {
+        printf(">= with only one arg\n");
+        return NULL;
+    }
+    if (node->next->data == NULL) {
+        printf(">= arg2 is NULL \n");
+        return NULL;
+    }
+
+    // maybe i dont need to allocate new memory here ?
+    MalType * arg1 = GC_MALLOC(sizeof(MalType));
+    MalType * arg2 = GC_MALLOC(sizeof(MalType));
+    arg1 = node->data;
+    arg2 = node->next->data;
+
+    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+        printf(">= with non int parameters\n");
+        return NULL;
+    }
+    if (*arg1->value.IntValue >= *arg2->value.IntValue) {
+        return true;
+    }
+    return false;
+}
 
 MalType * wrap_function(MalType * (*func)(node_t * node)) {
     // make func a MalType
@@ -386,6 +569,18 @@ env_t * create_repl(){
 
     append(function_pointers_list, wrap_function(equal), sizeof(MalType));
     append(symbol_list, "=", 1);
+
+    append(function_pointers_list, wrap_function(less), sizeof(MalType));
+    append(symbol_list, "<", 1);
+
+    append(function_pointers_list, wrap_function(more), sizeof(MalType));
+    append(symbol_list, ">", 1);
+
+    append(function_pointers_list, wrap_function(equal_less), sizeof(MalType));
+    append(symbol_list, "<=", 2);
+
+    append(function_pointers_list, wrap_function(equal_more), sizeof(MalType));
+    append(symbol_list, ">=", 2);
 
 
 

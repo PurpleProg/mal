@@ -23,7 +23,6 @@ int main(void) {
 	ssize_t read;
 
 	env_t * repl_env = create_repl();
-	printf("%s", pr_env(repl_env));
 
 	printf("user> ");
 	while ((read = getline(&line, &len, stdin)) != -1) {
@@ -148,10 +147,16 @@ MalType * EVAL(MalType * AST, env_t * env) {
 						return NULL;
 					}
 
-					MalType * mal_list = GC_MALLOC(sizeof(MalType));
-					mal_list->type = MAL_LIST;
-					mal_list->value.ListValue = element->next;
-					return EVAL(mal_list, env);
+					// skip "do" symbol
+					element = element->next;
+
+					// evaluate each element
+					MalType * evaluated_element;
+					while (element != NULL) {
+						evaluated_element = EVAL(element->data, env);
+						element = element->next;
+					};
+					return evaluated_element;
 				}
 				// if
 				if (strcmp(symbol, "if") == 0) {
@@ -227,8 +232,9 @@ MalType * EVAL(MalType * AST, env_t * env) {
 				}
 			}
 			///////////////////////////////////
-			//functions
-			//////////////////////////////////
+
+
+			// eval first element
 			MalType * first_element = element->data;
 			if (first_element == NULL) {
 				printf("first element is NULL\n");
@@ -238,11 +244,12 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			if (evaluated_first_element == NULL) {
 				return AST;
 			}
+
+			//////////////////////////////////
+			//functions call
 			if ( evaluated_first_element->type == MAL_FN) {
 				MalFn * function = evaluated_first_element->value.FnValue;
-				if (element->next == NULL) {
-					return AST;
-				}
+
 				MalList * arg_list = GC_MALLOC(sizeof(MalList));
 				arg_list->data = NULL;
 				arg_list->next = NULL;
@@ -272,45 +279,60 @@ MalType * EVAL(MalType * AST, env_t * env) {
 			}
 			//////////////////////////////////
 
-			// calling eval on the first element of the list should return a MalCoreFn
-			MalType * operation = EVAL(element->data, env);
-			if (operation == NULL) {
-				return NULL;
-			}
-			if (operation->type != MAL_CORE_FN) {
-				return AST;
-			}
-			if (operation->value.CoreFnValue == NULL) {
-				fprintf(stderr, "operation is null\n");
-				return AST;
-			}
-			// skip symbol
-			// this can make element NULL
-			element = element->next;
+			//////////////////////////////////
+			// core finctions
+			// if the first list element is a core_fn, call it.
+			if (evaluated_first_element->type == MAL_CORE_FN) {
+				MalType * core_fn = evaluated_first_element;
+				if (core_fn->value.CoreFnValue == NULL) {
+					fprintf(stderr, "core_fn is null\n");
+					return AST;
+				}
 
-			// print the rest of the list elements
-			// node_t * copy = element;
-			// while (copy != NULL) {
-			// 	MalType * args = copy->data;
-			// 	printf("args : %ld\n", *(args->value.IntValue));
-			// 	copy = copy->next;
-			// }
+				// skip symbol
+				// this can make element NULL
+				element = element->next;
 
-			// add the rest of the list to a list of evaluated things
-			node_t * list = GC_MALLOC(sizeof(node_t));
-			list->data = NULL;
-			list->next = NULL;
+				// add the rest of the list to a list of evaluated things
+
+				// define a list of evaluated element
+				node_t * evaluated_list = GC_MALLOC(sizeof(node_t));
+				evaluated_list->data = NULL;
+				evaluated_list->next = NULL;
+
+				// evaluate each element in the current list and add them
+				while (element != NULL) {
+					MalType * evaluated_element = EVAL(element->data, env);
+					if (evaluated_element != NULL) {
+						append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
+					}
+					element = element->next;
+				};
+
+				MalType * result = (*(MalCoreFn)core_fn->value.CoreFnValue)(evaluated_list);
+				return result;
+			}
+
+			// list have nothing special, eval everything and return.
+			// define a list of evaluated element
+			node_t * evaluated_list = GC_MALLOC(sizeof(node_t));
+			evaluated_list->data = NULL;
+			evaluated_list->next = NULL;
+
+			// evaluate each element in the current list and add them
 			while (element != NULL) {
 				MalType * evaluated_element = EVAL(element->data, env);
 				if (evaluated_element != NULL) {
-					append(list, (void *)evaluated_element, sizeof(MalType));
+					append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
 				}
 				element = element->next;
 			};
 
-			MalType * result = (*(MalCoreFn)operation->value.CoreFnValue)(list);
-			return result;
-
+			// wrap evaluated list in a MalType
+			MalType * wrapper = GC_MALLOC(sizeof(MalType));
+			wrapper->type = MAL_LIST;
+			wrapper->value.ListValue = evaluated_list;
+			return wrapper;
 		}
 		case MAL_INT: {
 			return AST;

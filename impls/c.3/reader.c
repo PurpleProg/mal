@@ -105,12 +105,49 @@ MalType * read_atom(reader_t * reader) {
 		token += sizeof(char);
 		token[strlen(token) -1 ] = '\0';
 
+		char * new_string = GC_MALLOC(strlen(token));
+
+		// transform  \" "
+		int i_new_string = 0;
+		for (unsigned long i_token = 0; i_token < strlen(token); i_token++) {
+			if (token[i_token] == '\\') {
+				if (token[i_token + 1] ==  '\\') {
+					// add the second / and skip the first /
+					new_string[i_new_string] = token[i_token+1];
+					i_token++;
+				} else if (token[i_token + 1] ==  'n') {
+					new_string[i_new_string] = '\n';
+					i_token++;
+				} else if (token[i_token + 1] ==  '\"') {
+					new_string[i_new_string] = '\"';
+					i_token++;
+				} else {
+					// unreconnized /patern
+					// just skip it ?
+					i_token++;
+				}
+
+			} else {
+				new_string[i_new_string] = token[i_token];
+			}
+			i_new_string += 1;
+		}
+
 		atom->type = MAL_STRING;
 		atom->value.StringValue = GC_malloc(sizeof(MalString));
-		memcpy(atom->value.StringValue, token, strlen(token));
+		memcpy(atom->value.StringValue, new_string, strlen(new_string));
 		return atom;
 	}
-	// if token is not a number nor a string, it's a symbol
+	if (*token == ':') {
+		//remove first :
+		token += sizeof(char);
+		atom->type = MAL_KEYWORD;
+		atom->value.SymbolValue = GC_malloc(sizeof(MalSymbol));
+		memcpy(atom->value.SymbolValue, token, strlen(token));
+		return atom;
+
+	}
+	// if token is not a number nor a string nor a keyword, it's a symbol
 	atom->type = MAL_SYMBOL;
 	atom->value.SymbolValue = GC_malloc(sizeof(MalSymbol));
 	memcpy(atom->value.SymbolValue, token, strlen(token));

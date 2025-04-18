@@ -18,18 +18,22 @@ typedef enum {
     MAL_NIL,
     MAL_TRUE,
     MAL_FALSE,
+    MAL_KEYWORD,
 } MalTypeEnum;
 
 typedef signed long MalInt;
 typedef char MalSymbol;
+typedef char MalString;
 typedef node_t MalList;
 typedef MalType * (*MalCoreFn)(node_t *);
 typedef struct MalFn MalFn;
 typedef int MalTrue;
 typedef int MalFalse;
 typedef int MalNil;
-typedef char MalString;
 
+// MAL_VECTOR use ListValue
+// MAL_KEYWORD use SybolValue
+// string and symbol could also share the same underlying type, but no.
 typedef union {
     MalInt * IntValue;
     MalSymbol * SymbolValue;

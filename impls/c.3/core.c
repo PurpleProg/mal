@@ -97,18 +97,121 @@ MalType * divide(node_t * node) {
     return MalResult;
 }
 
+MalType * prstr(node_t * node) {
+    size_t buffer_size = 256;
+    char * string = GC_MALLOC(buffer_size);
+    string[0] = '\0';
+
+    while (node != NULL) {
+        char * new_string = pr_str(node->data, 1);
+
+        // +1 for a space
+        size_t new_size = strlen(string) + strlen(new_string) + 1;
+        if (new_size > buffer_size) {
+            char *temp = GC_MALLOC(new_size);
+            strcpy(temp, string);
+            buffer_size = new_size;
+            string = temp;
+        }
+
+        strcat(string, new_string);
+        if (node->next != NULL) {strcat(string, " ");}
+        node = node->next;
+    }
+
+    MalType * mal_string_ret = GC_MALLOC(sizeof(MalType));
+    mal_string_ret->type = MAL_STRING;
+    mal_string_ret->value.StringValue = string;
+
+    return mal_string_ret;
+}
+MalType * str(node_t * node) {
+    size_t buffer_size = 256;
+    char * string = GC_MALLOC(buffer_size);
+    string[0] = '\0';
+
+    while (node != NULL) {
+        char * new_string = pr_str(node->data, 0);
+
+        size_t new_size = strlen(string) + strlen(new_string);
+        if (new_size > buffer_size) {
+            char *temp = GC_MALLOC(new_size);
+            strcpy(temp, string);
+            buffer_size = new_size;
+            string = temp;
+        }
+
+        strcat(string, new_string);
+        node = node->next;
+    }
+
+    MalType * mal_string_ret = GC_MALLOC(sizeof(MalType));
+    mal_string_ret->type = MAL_STRING;
+    mal_string_ret->value.StringValue = string;
+
+    return mal_string_ret;
+}
 MalType * prn(node_t * node) {
+    size_t buffer_size = 256;
+    char * string = GC_MALLOC(buffer_size);
+    string[0] = '\0';
+
+    while (node != NULL) {
+        char * new_string = pr_str(node->data, 1);
+
+        // +1 for a space
+        size_t new_size = strlen(string) + strlen(new_string) + 1;
+        if (new_size > buffer_size) {
+            char *temp = GC_MALLOC(new_size);
+            strcpy(temp, string);
+            buffer_size = new_size;
+            string = temp;
+        }
+
+        strcat(string, new_string);
+        if (node->next != NULL) {strcat(string, " ");}
+        node = node->next;
+    }
+
+    printf("%s\n", string);
+
     MalType * nil = GC_MALLOC(sizeof(MalType));
     nil->type = MAL_NIL;
     nil->value.NilValue = NULL;
 
-    if (node->data == NULL) {
-        return nil;
-    }
-
-    printf("%s\n", pr_str(node->data));
     return nil;
 }
+MalType * println(node_t * node) {
+    size_t buffer_size = 256;
+    char * string = GC_MALLOC(buffer_size);
+    string[0] = '\0';
+
+    while (node != NULL) {
+        char * new_string = pr_str(node->data, 0);
+
+        // +1 for a space
+        size_t new_size = strlen(string) + strlen(new_string) + 1;
+        if (new_size > buffer_size) {
+            char *temp = GC_MALLOC(new_size);
+            strcpy(temp, string);
+            buffer_size = new_size;
+            string = temp;
+        }
+
+        strcat(string, new_string);
+        if (node->next != NULL) {strcat(string, " ");}
+        node = node->next;
+    }
+
+    printf("%s\n", string);
+
+    MalType * nil = GC_MALLOC(sizeof(MalType));
+    nil->type = MAL_NIL;
+    nil->value.NilValue = NULL;
+
+    return nil;
+}
+
 MalType * list(node_t * node) {
     if (node->data == NULL) {
         // list is empty, allocate a new one
@@ -146,17 +249,17 @@ MalType * empty_question_mark(node_t * node) {
         bool->value.FalseValue = NULL;
         return bool;
     }
-    if (((MalType *)node->data)->type == MAL_LIST) {
-        MalList * list = ((MalType *)node->data)->value.ListValue;
-        if (list->data == NULL) {
-            bool->type = MAL_TRUE;
-            bool->value.TrueValue = NULL;
-        } else {
-            bool->type = MAL_FALSE;
-            bool->value.FalseValue = NULL;
-        }
-    } else {
+    if ( !( ((MalType *)node->data)->type == MAL_LIST || ((MalType *)node->data)->type == MAL_VECTOR)) {
         printf("arg is not a list\n");
+        bool->type = MAL_FALSE;
+        bool->value.FalseValue = NULL;
+        return bool;
+    }
+    MalList * list = ((MalType *)node->data)->value.ListValue;
+    if (list->data == NULL) {
+        bool->type = MAL_TRUE;
+        bool->value.TrueValue = NULL;
+    } else {
         bool->type = MAL_FALSE;
         bool->value.FalseValue = NULL;
     }
@@ -175,8 +278,7 @@ MalType * count(node_t * node) {
         *(ret->value.IntValue) = -1;
         return ret;
     }
-    if ( ! (((MalType *)node->data)->type == MAL_LIST)) {
-        // printf("count only work for list\n");
+    if ( ! (((MalType *)node->data)->type == MAL_LIST || ((MalType *)node->data)->type == MAL_VECTOR)) {
         *(ret->value.IntValue) = 0;
         return ret;
     }
@@ -232,7 +334,9 @@ MalType * equal(node_t * node) {
     arg2 = node->next->data;
 
     if (arg1->type != arg2->type) {
-        return false;
+        if (! ((arg1->type == MAL_LIST || arg1->type == MAL_VECTOR) && (arg2->type == MAL_LIST || arg2->type == MAL_VECTOR))) {
+            return false;
+        }
     }
     switch (arg1->type) {
         // types are the same, so singletones (true false nil) can return true directly
@@ -320,6 +424,14 @@ MalType * equal(node_t * node) {
             }
             return false;
 
+        }
+        case MAL_KEYWORD: {
+            char * symbol1 = arg1->value.SymbolValue;
+            char * symbol2 = arg2->value.SymbolValue;
+            if (strcmp(symbol1, symbol2) == 0) {
+                return true;
+            }
+            return false;
         }
         case MAL_SYMBOL: {
             char * symbol1 = arg1->value.SymbolValue;
@@ -581,6 +693,18 @@ env_t * create_repl(){
     symbol_list->data = NULL;
 
     // yes, hard coded.
+    append(function_pointers_list, wrap_function(println), sizeof(MalType));
+    append(symbol_list, "println", 7);
+
+    append(function_pointers_list, wrap_function(str), sizeof(MalType));
+    append(symbol_list, "str", 3);
+
+    append(function_pointers_list, wrap_function(prn), sizeof(MalType));
+    append(symbol_list, "prn", 3);
+
+    append(function_pointers_list, wrap_function(prstr), sizeof(MalType));
+    append(symbol_list, "pr-str", 6);
+
     append(function_pointers_list, wrap_function(add), sizeof(MalType));
     append(symbol_list, "+", 1);
 

@@ -6,7 +6,7 @@
 #include "printer.h"
 
 
-char * pr_str(MalType * AST) {
+char * pr_str(MalType * AST, int print_readably) {
     char * string;
     string = GC_malloc(1024); // TODO: dynamicly allocate this
 
@@ -17,27 +17,65 @@ char * pr_str(MalType * AST) {
     switch (AST->type) {
         case MAL_INT: {
             string = GC_malloc(sizeof(MalInt));
-       sprintf(string, "%ld", *AST->value.IntValue);
-       return string;
+            sprintf(string, "%ld", *AST->value.IntValue);
+            return string;
+        }
+        case MAL_KEYWORD: {
+            strcat(string, ":");
+            strcat(string, AST->value.SymbolValue);
+            return string;
         }
         case MAL_SYMBOL: {
             return AST->value.SymbolValue;
         }
         case MAL_STRING: {
-            strcat(string, "\"");
-            strcat(string, AST->value.StringValue);
-            strcat(string, "\"");
-            return string;
+            if (print_readably == 0) {
+                strcat(string, AST->value.StringValue);
+                return string;
+            }
+            // max new size
+            char * token = AST->value.StringValue;
+            char * new_string = GC_MALLOC(2 * strlen(token));
+
+            // transform  " -> \"
+            int i_new_string = 0;
+            //strcat(new_string, "\"");
+            for (unsigned long i_token = 0; i_token < strlen(token); i_token++) {
+                if (token[i_token] ==  '\\') {
+                    new_string[i_new_string] = token[i_token];
+                    strcat(new_string, "\\");
+                    i_new_string++;
+                } else if (token[i_token] ==  '\n') {
+                    strcat(new_string, "\\n");
+                    i_new_string++;
+                } else if (token[i_token] ==  '\"') {
+                    strcat(new_string, "\\\"");
+                    i_new_string++;
+                } else {
+                    new_string[i_new_string] = token[i_token];
+                }
+                i_new_string++;
+
+            }
+
+            // wrap string in ""
+            char * wrap_string = GC_MALLOC(strlen(new_string) + 2);
+            strcat(wrap_string, "\"");
+            strcat(wrap_string, new_string);
+            strcat(wrap_string, "\"");
+
+            return wrap_string;
+
         }
         case MAL_LIST: {
             strcat(string, "(");
-       node_t * node = AST->value.ListValue;
+            node_t * node = AST->value.ListValue;
 
-       while (node != NULL && node->data != NULL) {
-           strcat(string, pr_str((MalType *)node->data));
+            while (node != NULL && node->data != NULL) {
+                strcat(string, pr_str((MalType *)node->data, print_readably));
 
-       if (node->next != NULL) {
-           strcat(string, " ");
+                if (node->next != NULL) {
+                    strcat(string, " ");
        }
        node = node->next;
        }
@@ -49,7 +87,7 @@ char * pr_str(MalType * AST) {
        node_t * node = AST->value.ListValue;
 
        while (node != NULL && node->data != NULL) {
-           strcat(string, pr_str((MalType *)node->data));
+           strcat(string, pr_str((MalType *)node->data, print_readably));
 
        if (node->next != NULL) {
            strcat(string, " ");
@@ -116,7 +154,10 @@ char * pr_env(env_t * env) {
         strcat(string, current_node->data);
         strcat(string, " : ");
         // value
-        strcat(string, pr_str(current_node->next->data));
+        if (current_node->next->data == NULL) {
+            strcat(string, "NULL");
+        }
+        strcat(string, pr_str(current_node->next->data, 0));
         strcat(string, "\n");
 
         current_node = current_node->next->next;

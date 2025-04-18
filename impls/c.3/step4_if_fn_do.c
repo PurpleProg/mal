@@ -258,20 +258,78 @@ MalType * EVAL(MalType * AST, env_t * env) {
 				node_t * node = element->next;
 				while (node != NULL) {
 					MalType * arg = node->data;
-					arg = EVAL(arg, env);
-					append(arg_list, arg, sizeof(MalType));
+					append(arg_list, EVAL(arg, env), sizeof(MalType));
 					node = node->next;
 				}
 
-				// wrap the MalList * arg list into a MalType
-				MalType * mal_type_arg_list = GC_MALLOC(sizeof(MalType));
-				mal_type_arg_list->type = MAL_LIST;
-				mal_type_arg_list->value.ListValue = arg_list;
+				MalType * expr_mal_type = GC_MALLOC(sizeof(MalType));
+				expr_mal_type->type = MAL_LIST;
+				expr_mal_type->value.ListValue = arg_list;
+
+				// check for Clojure-style variadic function parameters
+				node_t * binds = function->param;
+				node_t * exprs = arg_list;
+
+				while (binds != NULL && exprs != NULL) {
+					if (binds->data == NULL) {
+						break;
+					}
+					if ( strcmp((char *)binds->data, "&") == 0 ) {
+						// skip the & in the binds list
+						binds->data = binds->next->data;
+						binds->next = NULL;
+
+						// make the next exprs a list (wraped in a maltype) that contain the rest of the exprs
+						//define it
+						MalType * wrap = GC_MALLOC(sizeof(MalType));
+						wrap->type = MAL_LIST;
+						wrap->value.ListValue = GC_MALLOC(sizeof(node_t));
+						memcpy(wrap->value.ListValue, exprs, sizeof(node_t));
+						// assigne the list
+						exprs->data = wrap;
+						exprs->next = NULL;
+						printf("break\n");
+						break;
+					}
+					// catch exprs empty
+					// broke regular functions
+					if (exprs->next == NULL && binds->next != NULL) {
+						printf("expr is NULL\n");
+						if ( strcmp((char *)binds->next->data, "&") != 0 ) {
+							printf("not enough args passed to the function\n");
+							return AST;
+						}
+						// skip the & in the binds list
+						binds = binds->next;
+						binds->data = binds->next->data;
+
+
+						// if there is no exprs, still wrap a empty list (node_t *) in a MalType->type == MAL_LIST
+						MalType * wrap = GC_MALLOC(sizeof(MalType));
+						wrap->type = MAL_LIST;
+						wrap->value.ListValue = GC_MALLOC(sizeof(node_t));
+						// create a empty list
+						node_t * list = GC_MALLOC(sizeof(node_t));
+						list->data = NULL;
+						list->next = NULL;
+
+						// put empty list in the wrapper
+						memcpy(wrap->value.ListValue, list, sizeof(node_t));
+
+						// put the wrapper in the exprs list
+						exprs->next = GC_MALLOC(sizeof(node_t));
+						exprs->next->data = wrap;
+						break;
+					}
+
+					binds = binds->next;
+					exprs = exprs->next;
+				}
 
 				// create the env for evaluation
 				env_t * new_env = create_env(function->env, (MalList *)function->param, arg_list);
 				// DEBUG:
-				// printf("created a new function with this env : %s\n", pr_env(new_env));
+				printf("created a new function with this env : %s\n", pr_env(new_env));
 				return EVAL(function->body, new_env);
 
 			}
@@ -606,10 +664,11 @@ MalType * EVAL(MalType * AST, env_t * env) {
 		case MAL_FALSE: {return AST;}
 		case MAL_NIL: {return AST;}
 		case MAL_CORE_FN: {return AST;}
+		case MAL_KEYWORD: {return AST;}
 		case MAL_FN: {return AST;}
 	}
 
-	fprintf(stderr, "unmatched AST");
+	fprintf(stderr, "unmatched AST\n");
 	return NULL;
 }
 
@@ -621,7 +680,7 @@ MalType * EVAL_symbol(MalType * AST, env_t * env) {
 }
 
 char* PRINT(MalType * AST) {
-	return pr_str(AST);
+	return pr_str(AST, 1);
 }
 
 

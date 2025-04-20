@@ -15,6 +15,7 @@ typedef enum {
     MAL_STRING,
     MAL_CORE_FN,
     MAL_FN,
+    MAL_FN_WRAPER,
     MAL_NIL,
     MAL_TRUE,
     MAL_FALSE,
@@ -27,6 +28,7 @@ typedef char MalString;
 typedef node_t MalList;
 typedef MalType * (*MalCoreFn)(node_t *);
 typedef struct MalFn MalFn;
+typedef struct MalFnWraper MalFnWraper;
 typedef int MalTrue;
 typedef int MalFalse;
 typedef int MalNil;
@@ -39,7 +41,8 @@ typedef union {
     MalSymbol * SymbolValue;
     MalList * ListValue;
     MalCoreFn CoreFnValue;
-    MalFn * FnValue;
+    MalFn* FnValue;
+    MalFnWraper * FnWraperValue;
     MalTrue * TrueValue;
     MalFalse * FalseValue;
     MalNil * NilValue;
@@ -64,10 +67,19 @@ typedef struct env {
 } env_t;
 
 // Function
+// original fn* return type
 struct MalFn {
-    MalList * param;
+    MalType * param;
     MalType * body;
     env_t * env;
+};
+// new wrapper arount fn*
+struct MalFnWraper {
+    MalType * ast;
+    MalType * param;
+    env_t * env;
+    // actual funciton
+    struct MalFn * fn;
 };
 
 #endif

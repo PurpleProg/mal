@@ -339,7 +339,6 @@ MalType * equal(node_t * node) {
         }
     }
     switch (arg1->type) {
-        // types are the same, so singletones (true false nil) can return true directly
         case MAL_VECTOR: {
             node_t * node1 = arg1->value.ListValue;
             node_t * node2 = arg2->value.ListValue;
@@ -413,9 +412,6 @@ MalType * equal(node_t * node) {
             // false
             return false;
         }
-        case MAL_TRUE: {return true;}
-        case MAL_FALSE: {return true;}
-        case MAL_NIL: {return true;}
         case MAL_STRING: {
             char * string1 = arg1->value.StringValue;
             char * string2 = arg2->value.StringValue;
@@ -441,8 +437,20 @@ MalType * equal(node_t * node) {
             }
             return false;
         }
+        case MAL_FN_WRAPER: {
+            // unpack and recursive call
+            MalFn * fn1 = arg1->value.FnWraperValue->fn;
+            MalFn * fn2 = arg2->value.FnWraperValue->fn;
+
+            // wrap in a list
+            node_t * list = GC_MALLOC(sizeof(node_t));
+            append(list, fn1, sizeof(MalFn));
+            append(list, fn2, sizeof(MalFn));
+
+            return equal(list);
+        }
         case MAL_FN: {
-            // two function with same body and same
+            // two function with same body and same params
             MalFn * fn1 = arg1->value.FnValue;
             MalFn * fn2 = arg2->value.FnValue;
 
@@ -454,12 +462,22 @@ MalType * equal(node_t * node) {
                 return false;
             }
 
-            // param is a list of char *
-            // to fix TODO:
-            node_t * symbol_list_1 = fn1->param;
-            node_t * symbol_list_2 = fn2->param;
+            // param is a MalType->list of MalType->Symbol
+            if ( ((MalType *)fn1->param)->type != MAL_LIST &&  ((MalType *)fn1->param)->type != MAL_VECTOR) {
+                printf("equal : fn1->param is not a list\n");
+            }
+            if ( ((MalType *)fn2->param)->type != MAL_LIST &&  ((MalType *)fn2->param)->type != MAL_VECTOR) {
+                printf("equal : fn2->param is not a list\n");
+            }
+            node_t * symbol_list_1 = ((MalType *)fn1->param)->value.ListValue;
+            node_t * symbol_list_2 = ((MalType *)fn2->param)->value.ListValue;
+
             while (symbol_list_1 != NULL && symbol_list_2 != NULL) {
-                if (strcmp(symbol_list_1->data, symbol_list_2->data) != 0) {
+                // should check that every symbol is indeed a MAL_SYMBOL
+                char * symbol1 = ((MalType *)symbol_list_1->data)->value.SymbolValue;
+                char * symbol2 = ((MalType *)symbol_list_2->data)->value.SymbolValue;
+
+                if (strcmp(symbol1, symbol2) != 0) {
                     return false;
                 }
                 symbol_list_1 = symbol_list_1->next;
@@ -477,8 +495,9 @@ MalType * equal(node_t * node) {
                 return false;
             }
 
-            // i should check if the env itself is the same but im lazy rn
-            // TODO: check (map_t *)env->data
+            // TODO: check if the env themself are the same
+            // (map_t *)env->data
+            // when hashmap implemented, recuscive equal call
 
             // if all of that was not false, then fn1 must be = to fn2
             return true;
@@ -490,6 +509,8 @@ MalType * equal(node_t * node) {
             }
             return false;
         }
+        // types are the same, so singletones (true false nil) can return true directly
+        default: {return true;}
     }
 
     printf("= fallback\n");

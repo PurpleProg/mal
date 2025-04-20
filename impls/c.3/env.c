@@ -22,7 +22,7 @@ MalType * get(env_t * env, MalSymbol * key){
 }
 
 
-env_t * create_env(env_t * outer, node_t * binds, node_t * exprs) {
+env_t * create_env(env_t * outer, MalType * binds, node_t * exprs) {
     env_t * env = GC_MALLOC(sizeof(env_t));
     env->data = GC_MALLOC(sizeof(map_t));
     if (outer == NULL) {
@@ -31,20 +31,35 @@ env_t * create_env(env_t * outer, node_t * binds, node_t * exprs) {
         env->outer = outer;
     }
 
-    if (binds == NULL || exprs == NULL) {
+    if (binds == NULL) {
         return env;
-    }
-    if (binds->data == NULL || exprs->data == NULL) {
-        return env;
-    }
-    while (binds != NULL && exprs != NULL) {
-        set(env, binds->data, exprs->data);
 
-        binds = binds->next;
+    }
+    if (binds->type != MAL_LIST && binds->type != MAL_VECTOR) {
+        printf("env binds must be a list or a vector\n");
+        return env;
+    }
+    node_t * binds_list = binds->value.ListValue;
+
+    if (binds_list == NULL || exprs == NULL) {
+        return env;
+    }
+    if (binds_list->data == NULL || exprs->data == NULL) {
+        return env;
+    }
+    while (binds_list != NULL && exprs != NULL) {
+        if ( ((MalType *)binds_list->data)->type != MAL_SYMBOL) {
+            printf("env binds must be symbols\n");
+            return NULL;
+        }
+        char * bind = ((MalType *)binds_list->data)->value.SymbolValue;
+        set(env, bind, exprs->data);
+
+        binds_list = binds_list->next;
         exprs = exprs->next;
     }
-    if ((binds == NULL) ^ (exprs == NULL)) {
-        fprintf(stderr, "binds and exprs are different lenght, some have been discarded\n");
+    if ((binds_list == NULL) ^ (exprs == NULL)) {
+        fprintf(stderr, "binds_list and exprs are different lenght, some have been discarded\n");
     }
 
 

@@ -117,6 +117,10 @@ char * pr_str(MalType * AST, int print_readably) {
             strcat(string, "false");
             return string;
         }
+        case MAL_FN_WRAPER: {
+            strcat(string, "#<function wraper>");
+            return string;
+        }
     }
 
     return string;

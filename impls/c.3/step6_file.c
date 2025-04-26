@@ -25,7 +25,7 @@ MalType * eval(node_t * node) {
 }
 
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	GC_INIT();
 	char * line = NULL;
 	size_t len = 0;
@@ -35,18 +35,45 @@ int main(void) {
 
 	rep("(def! not (fn* (a) (if a false true)))", repl_env);
 	rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) \"\\nnil)\")) ) ))", repl_env);
+	// rep("(def! load-file (fn* (f) (eval (read-string (str (slurp f) )) ) ))", repl_env);
 	rep("(def! test (fn* (a) (str a)))", repl_env);
 
 	// add eval to the repl
 	set(repl_env, "eval", wrap_function(eval));
 
+	// create *ARGV*
+	MalType * args_list = GC_MALLOC(sizeof(MalType));
+	args_list->type = MAL_LIST;
+	args_list->value.ListValue = GC_MALLOC(sizeof(node_t));
+	for (int i = 2; i<argc; i++) {
+		char * arg = argv[i];
+		MalType * wraped_arg = GC_MALLOC(sizeof(MalType));
+		wraped_arg->type = MAL_STRING;
+		wraped_arg->value.StringValue = GC_MALLOC(strlen(arg));
+		strcat(wraped_arg->value.StringValue, argv[i]);
+		append(args_list->value.ListValue, wraped_arg, sizeof(MalType));
+	}
+	set(repl_env, "*ARGV*", args_list);
+
+	// DEBUG:
 	// printf("repl created : %s\n", pr_env(repl_env));
+
+	// check if the interpretor is called with args
+	if (argc > 1) {
+
+		// call load-file on the first arg
+		char * string = GC_MALLOC(strlen(argv[1]) + strlen("(load-file \"\")"));
+		sprintf(string, "(load-file \"%s\")", argv[1]);
+		printf("%s\n", rep(string, repl_env));
+		return 0;
+	}
 
 	printf("user> ");
 	while ((read = getline(&line, &len, stdin)) != -1) {
 		printf("%s\n", rep(line, repl_env));
 		printf("user> ");
 	}
+	return 1;
 }
 
 

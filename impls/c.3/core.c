@@ -237,8 +237,6 @@ MalType * slurp(node_t * node) {
         return NULL;
     }
     char * filename = ((MalType *)node->data)->value.StringValue;
-    printf("slurping : '%s'\n", filename);
-
 
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
@@ -264,8 +262,6 @@ MalType * slurp(node_t * node) {
     buffer[bytes_read] = '\0'; // Null-terminate the string
 
     fclose(file); // Close the file
-
-    printf("slurped : \n%s\n", buffer);
 
     // wrap buffer in a MAL_SRING
     MalType * string = GC_MALLOC(sizeof(MalType));

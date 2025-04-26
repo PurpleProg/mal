@@ -6,6 +6,7 @@
 #include "linked_list.h"
 #include "reader.h"
 #include "types.h"
+#include "printer.h"
 
 
 MalType * read_str(char * string) {
@@ -22,14 +23,45 @@ MalType * read_form(reader_t * reader) {
 
 	char * token = (char *)reader->tokens->data;
 
+	// reader macro @
+	if (*token == '@') {
+		/*************************/
+		/* @atom -> (deref atom) */
+		/*************************/
+		printf("@ token !\n");
+
+		// get the atom name and wrap it in a new reader
+		char * atom_name = reader->tokens->next->data;
+		printf("atom name : '%s'\n", atom_name);
+		reader_t * new_reader = GC_MALLOC(sizeof(reader_t));
+		new_reader->position = 0;
+		new_reader->tokens = GC_MALLOC(sizeof(node_t));
+		append(new_reader->tokens, atom_name, strlen(atom_name));
+
+		MalType * ret = GC_MALLOC(sizeof(MalType));
+		ret->type = MAL_LIST;
+		ret->value.ListValue = GC_MALLOC(sizeof(node_t));
+
+		// wrap the string "deref" in a MalType
+ 		MalType * deref = GC_MALLOC(sizeof(MalType));
+		deref->type = MAL_SYMBOL;
+		deref->value.SymbolValue = GC_MALLOC(5);
+		memcpy(deref->value.SymbolValue, "deref", 5);
+
+		append(ret->value.ListValue, deref, sizeof(MalType));
+		append(ret->value.ListValue, read_atom(new_reader), sizeof(MalType));
+
+		printf("macro : '%s'\n", pr_str(ret, 0));
+
+		return ret;
+	}
+
 	// dereferencing token to get the first char
 	switch (*token) {
 		case '(':
 			return read_list(reader, 0);
 		case '[':
 			return read_list(reader, 1);
-		//case '"':
-			//return read_list(reader, 1);
 		default:
 			return read_atom(reader);
 	}
@@ -43,18 +75,17 @@ MalType * read_list(reader_t * reader, int vector) {
 		list->type = MAL_LIST;
 	}
 	list->value.ListValue = GC_malloc(sizeof(MalList));
-
 	list->value.ListValue->next = NULL;
 	list->value.ListValue->data = NULL;
 
 	// handle single parentesis input
 	if (reader_peek(reader)->next == NULL) {
 		printf("only one token\n");
-		printf("how to do error handeling in C ?\n");
 		return list;
 	}
 
 	char * token = (char *)reader_next(reader)->data;
+
 	char * end_token;
 	if (vector == 1) {
 		end_token = "]";
@@ -63,21 +94,26 @@ MalType * read_list(reader_t * reader, int vector) {
 	}
 	while (strcmp(token, end_token) != 0) {
 
-		MalType * new_form = GC_malloc(sizeof(MalType));
-		new_form = read_form(reader);
-		// append the ret of read_form to the current MalList
-		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
-		// if (new_form->type == MAL_INT) {
-		// 	printf("read : list appended %ld\n", *(new_form->value.IntValue));
-		// }
-
-		// if the tokens dont have a matching closing parentesis
-		// if we reach end of file
+		// if the tokens dont have a matching end token
+		// or reach end of file
 		if (reader_peek(reader)->next == NULL) {
-			printf("missing closing )\n");
 			printf("current (last) token : '%s'\n", (char *)reader_peek(reader)->data);
+			printf("unbalanced\n");
 			return list;
 		}
+
+		if (*token == ';') {
+			// skip comments
+			printf("skip\n");
+			token = reader_next(reader)->data;
+			continue;
+		}
+
+		MalType * new_form = GC_malloc(sizeof(MalType));
+		new_form = read_form(reader);
+
+		// append the ret of read_form to the current MalList
+		append(list->value.ListValue, (void *)new_form, sizeof(MalType));
 
 		token = reader_next(reader)->data;
 	}
@@ -93,12 +129,14 @@ MalType * read_atom(reader_t * reader) {
 
 	char * endptr = GC_malloc(strlen(token));
 	long number = strtol(token, &endptr, 10);
+
 	if (endptr != token) {
 		atom->type = MAL_INT;
 		atom->value.IntValue = GC_malloc(sizeof(MalInt));
 		*atom->value.IntValue = number;
 		return atom;
 	}
+
 	// token is not a number
 	if (*token == '"') {
 		//remove surrounding "
@@ -147,6 +185,7 @@ MalType * read_atom(reader_t * reader) {
 		return atom;
 
 	}
+
 	// special forms
 	// true
 	if (strcmp(token, "true") == 0) {

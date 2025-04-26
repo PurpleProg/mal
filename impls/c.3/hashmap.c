@@ -6,7 +6,7 @@
 #include <string.h>
 
 
-int map_set(map_t * map, MalSymbol * key, MalType * value){
+int map_set(map_t * map, char * key, void * value){
     if (map_contains(map, key)) {
         node_t * current_node = map;
         if (map == NULL) {
@@ -36,7 +36,7 @@ int map_set(map_t * map, MalSymbol * key, MalType * value){
     return 0;
 }
 
-MalType * map_get(map_t * map, MalSymbol * key){
+void * map_get(map_t * map, char * key){
 
     node_t * current_node = map;
     if (map == NULL) {
@@ -58,7 +58,7 @@ MalType * map_get(map_t * map, MalSymbol * key){
     return NULL;
 }
 
-int map_contains(map_t * map, MalSymbol * key){
+int map_contains(map_t * map, char * key){
     node_t * current_node = map;
     while (current_node != NULL){
         if (current_node->data == NULL) {
@@ -76,7 +76,7 @@ int map_contains(map_t * map, MalSymbol * key){
     return 0;
 }
 
-void map_remove(map_t * map, MalSymbol * key){
+void map_remove(map_t * map, char * key){
     // not tested at all probably broken somehow but hey i dont need it yet
     node_t * current_node = map;
     while (current_node != NULL){

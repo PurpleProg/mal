@@ -18,7 +18,6 @@ MalType * read_str(char * string) {
 	return read_form(reader);
 }
 
-
 MalType * read_form(reader_t * reader) {
 
 	char * token = (char *)reader->tokens->data;
@@ -28,11 +27,9 @@ MalType * read_form(reader_t * reader) {
 		/*************************/
 		/* @atom -> (deref atom) */
 		/*************************/
-		printf("@ token !\n");
 
 		// get the atom name and wrap it in a new reader
 		char * atom_name = reader->tokens->next->data;
-		printf("atom name : '%s'\n", atom_name);
 		reader_t * new_reader = GC_MALLOC(sizeof(reader_t));
 		new_reader->position = 0;
 		new_reader->tokens = GC_MALLOC(sizeof(node_t));
@@ -51,8 +48,6 @@ MalType * read_form(reader_t * reader) {
 		append(ret->value.ListValue, deref, sizeof(MalType));
 		append(ret->value.ListValue, read_atom(new_reader), sizeof(MalType));
 
-		printf("macro : '%s'\n", pr_str(ret, 0));
-
 		return ret;
 	}
 
@@ -62,11 +57,80 @@ MalType * read_form(reader_t * reader) {
 			return read_list(reader, 0);
 		case '[':
 			return read_list(reader, 1);
+		case '{':
+			return read_hashmap(reader);
 		default:
 			return read_atom(reader);
 	}
 }
 
+MalType * read_hashmap(reader_t * reader) {
+	MalType * hashmap = GC_malloc(sizeof(MalType));
+	hashmap->type = MAL_HASHMAP;
+	hashmap->value.HashmapValue = GC_malloc(sizeof(MalHashmap));
+
+	// handle single parentesis input
+	if (reader_peek(reader)->next == NULL) {
+		printf("only one token\n");
+		return hashmap;
+	}
+
+	char * token = (char *)reader_next(reader)->data;
+
+	char * end_token = "}";
+	while (strcmp(token, end_token) != 0) {
+
+		// if the tokens dont have a matching end token
+		// or reach end of file
+		if (reader_peek(reader)->next == NULL) {
+			printf("current (last) token : '%s'\n", (char *)reader_peek(reader)->data);
+			printf("unbalanced\n");
+			return hashmap;
+		}
+
+		if (*token == ';') {
+			// skip comments
+			token = reader_next(reader)->data;
+			continue;
+		}
+
+		MalType * key = GC_malloc(sizeof(MalType));
+		key = read_form(reader);
+
+		// append the ret of read_form to the current hashmap
+		// that is the key
+		if (key->type != MAL_STRING && key->type != MAL_KEYWORD) {
+			printf("key can only be string\n");
+			return hashmap;
+		}
+
+		token = reader_next(reader)->data;
+
+		/********* after key, repeat for the value ***********/
+
+		// if the tokens dont have a matching end token
+		// or reach end of file
+		if (reader_peek(reader)->next == NULL) {
+			printf("current (last) token : '%s'\n", (char *)reader_peek(reader)->data);
+			printf("unbalanced\n");
+			return hashmap;
+		}
+
+		if (*token == ';') {
+			// skip comments
+			token = reader_next(reader)->data;
+			continue;
+		}
+		MalType * value = GC_malloc(sizeof(MalType));
+		value = read_form(reader);
+
+		map_set(hashmap->value.HashmapValue, key->value.StringValue, value);
+
+		token = reader_next(reader)->data;
+	}
+
+	return hashmap;
+}
 MalType * read_list(reader_t * reader, int vector) {
 	MalType * list = GC_malloc(sizeof(MalType));
 	if (vector == 1) {
@@ -104,7 +168,6 @@ MalType * read_list(reader_t * reader, int vector) {
 
 		if (*token == ';') {
 			// skip comments
-			printf("skip\n");
 			token = reader_next(reader)->data;
 			continue;
 		}
@@ -120,8 +183,6 @@ MalType * read_list(reader_t * reader, int vector) {
 
 	return list;
 }
-
-
 MalType * read_atom(reader_t * reader) {
 	MalType * atom = GC_malloc(sizeof(MalType));
 
@@ -221,7 +282,6 @@ node_t * reader_next(reader_t * reader) {
 	   pop(&(reader->tokens));
 	   return reader->tokens;
 }
-
 node_t * reader_peek(reader_t * reader) {
 	return reader->tokens;
 }

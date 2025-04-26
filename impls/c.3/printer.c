@@ -76,9 +76,9 @@ char * pr_str(MalType * AST, int print_readably) {
 
                 if (node->next != NULL) {
                     strcat(string, " ");
-       }
-       node = node->next;
-       }
+                }
+                node = node->next;
+            }
        strcat(string, ")");
        return string;
         }
@@ -127,6 +127,28 @@ char * pr_str(MalType * AST, int print_readably) {
             strcat(string, ")");
 
             return string;
+        }
+        case MAL_HASHMAP: {
+            strcat(string, "{");
+            map_t * node = AST->value.HashmapValue;
+
+            while (node != NULL && node->data != NULL && node->next != NULL && node->next->data != NULL) {
+                // key
+                strcat(string, "\"");
+                strcat(string, (char *)node->data);
+                strcat(string, "\" ");
+
+                // value
+                strcat(string, pr_str((MalType *)node->next->data, print_readably));
+                if (node->next->next != NULL) {
+                    strcat(string, " ");
+                }
+
+                node = node->next->next;
+            }
+            strcat(string, "}");
+            return string;
+
         }
     }
 

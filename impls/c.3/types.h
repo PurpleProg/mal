@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include "linked_list.h"
+#include "hashmap.h"
 
 
 // MalType
@@ -21,6 +22,7 @@ typedef enum {
     MAL_FALSE,
     MAL_KEYWORD,
     MAL_ATOM,
+    MAL_HASHMAP,
 } MalTypeEnum;
 
 typedef signed long MalInt;
@@ -33,6 +35,7 @@ typedef struct MalFnWraper MalFnWraper;
 typedef int MalTrue;
 typedef int MalFalse;
 typedef int MalNil;
+typedef map_t MalHashmap;
 
 // MAL_VECTOR use ListValue
 // MAL_KEYWORD use SybolValue
@@ -49,6 +52,7 @@ typedef union {
     MalNil * NilValue;
     MalString * StringValue;
     MalType * AtomValue;
+    MalHashmap * HashmapValue;
 } MalTypeValue;
 
 
@@ -57,10 +61,6 @@ struct MalType {
     MalTypeValue value;
 };
 ////////////////////////
-
-
-// map
-typedef node_t map_t;
 
 // env
 typedef struct env {

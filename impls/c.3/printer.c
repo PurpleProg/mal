@@ -121,6 +121,13 @@ char * pr_str(MalType * AST, int print_readably) {
             strcat(string, "#<function wraper>");
             return string;
         }
+        case MAL_ATOM: {
+            strcat(string, "(atom ");
+            strcat(string, pr_str(AST->value.AtomValue, print_readably));
+            strcat(string, ")");
+
+            return string;
+        }
     }
 
     return string;

@@ -6,30 +6,36 @@
 #include "types.h"
 #include "env.h"
 #include "core.h"
+#include "EVAL.h"
 
 
 MalType * add(node_t * node) {
-	// add a list of signed long
-	if (node->data == NULL) {
-       return 0;
-       }
+    // add a list of signed long
+    if (node->data == NULL) {
+        return 0;
+    }
 
-       signed long result = 0;
-       do {
-           result += *((MalType *)node->data)->value.IntValue;
-       node = node->next;
-       } while (node != NULL);
+    signed long result = 0;
+    while (node != NULL) {
+        MalType * integer = node->data;
+        if (integer->type != MAL_INT) {
+            printf("add arg is not int\n");
+            break;
+        }
+        result += *integer->value.IntValue;
+        node = node->next;
+    };
 
-       MalType * MalResult = GC_MALLOC(sizeof(MalType));
-       MalResult->type = MAL_INT;
-       MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-       memcpy(MalResult->value.IntValue, &result, sizeof(result));
-       return MalResult;
+    MalType * MalResult = GC_MALLOC(sizeof(MalType));
+    MalResult->type = MAL_INT;
+    MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
+    memcpy(MalResult->value.IntValue, &result, sizeof(result));
+    return MalResult;
 }
 MalType * sub(node_t * node) {
 	// sub a list of signed long
 	if (node->data == NULL) {
-       return 0;
+           return 0;
        }
 
        signed long result = 0;
@@ -121,7 +127,8 @@ MalType * prstr(node_t * node) {
 
     MalType * mal_string_ret = GC_MALLOC(sizeof(MalType));
     mal_string_ret->type = MAL_STRING;
-    mal_string_ret->value.StringValue = string;
+    mal_string_ret->value.StringValue = GC_MALLOC(strlen(string));
+    memcpy(mal_string_ret->value.StringValue, string, strlen(string));
 
     return mal_string_ret;
 }
@@ -147,7 +154,8 @@ MalType * str(node_t * node) {
 
     MalType * mal_string_ret = GC_MALLOC(sizeof(MalType));
     mal_string_ret->type = MAL_STRING;
-    mal_string_ret->value.StringValue = string;
+    mal_string_ret->value.StringValue = GC_MALLOC(strlen(string));
+    memcpy(mal_string_ret->value.StringValue, string, strlen(string));
 
     return mal_string_ret;
 }
@@ -210,6 +218,61 @@ MalType * println(node_t * node) {
     nil->value.NilValue = NULL;
 
     return nil;
+}
+MalType * readstring(node_t * node) {
+    if ( ((MalType *)node->data)->type != MAL_STRING) {
+        printf("read-string arg is not a string\n");
+        return NULL;
+    }
+    char * string = ((MalType *)node->data)->value.StringValue;
+
+    return read_str(string);
+}
+MalType * slurp(node_t * node) {
+    // chatGPT wrote this one
+
+    // unpack the filename
+    if ( ((MalType *)node->data)->type != MAL_STRING) {
+        printf("slurp arg should be a string\n");
+        return NULL;
+    }
+    char * filename = ((MalType *)node->data)->value.StringValue;
+    printf("slurping : '%s'\n", filename);
+
+
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        perror("Error opening file");
+        return NULL; // Return NULL if the file cannot be opened
+    }
+
+    // Move the file pointer to the end to determine the file size
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET); // Move back to the beginning of the file
+
+    // Allocate memory for the contents (+1 for the null terminator)
+    char* buffer = (char*)GC_MALLOC(file_size + 1);
+    if (buffer == NULL) {
+        perror("Error allocating memory");
+        fclose(file);
+        return NULL; // Return NULL if memory allocation fails
+    }
+
+    // Read the file contents into the buffer
+    size_t bytes_read = fread(buffer, 1, file_size, file);
+    buffer[bytes_read] = '\0'; // Null-terminate the string
+
+    fclose(file); // Close the file
+
+    printf("slurped : \n%s\n", buffer);
+
+    // wrap buffer in a MAL_SRING
+    MalType * string = GC_MALLOC(sizeof(MalType));
+    string->type = MAL_STRING;
+    string->value.StringValue = buffer;
+
+    return string; // Return the contents of the file
 }
 
 MalType * list(node_t * node) {
@@ -693,6 +756,96 @@ MalType * equal_more(node_t * node) {
     return false;
 }
 
+MalType * atom(node_t * node) {
+    if (node->data == NULL) {
+        printf("atom must take an arg \n");
+        return node->data;
+    }
+    MalType * ret = GC_MALLOC(sizeof(MalType));
+    ret->type = MAL_ATOM;
+    ret->value.AtomValue = node->data;
+    return ret;
+
+}
+MalType * atom_question_mark(node_t * node) {
+    MalType * false = GC_MALLOC(sizeof(MalType));
+    false->type = MAL_FALSE;
+    false->value.FalseValue = NULL;
+    MalType * true = GC_MALLOC(sizeof(MalType));
+    true->type = MAL_TRUE;
+    true->value.TrueValue = NULL;
+
+    if (node->data == NULL) {
+        return false;
+    }
+
+    if (((MalType *)node->data)->type == MAL_ATOM) {
+        return true;
+    } else {
+        return false;
+    }
+}
+MalType * deref(node_t * node) {
+    MalType * atom = node->data;
+    if (atom->type != MAL_ATOM) {
+        printf("deref arg is not an atom\n");
+        return node->data;
+    }
+    return atom->value.AtomValue;
+}
+MalType * reset(node_t * node) {
+    MalType * atom = node->data;
+    if (atom->type != MAL_ATOM) {
+        printf("reset arg1 is not an atom\n");
+        return node->data;
+    }
+    if (node->next == NULL) {
+        printf("reset take two arg\n");
+        return NULL;
+    }
+    memcpy(atom->value.AtomValue, node->next->data, sizeof(MalType));
+    return atom->value.AtomValue;
+}
+MalType * swap(node_t * node) {
+    MalType * atom = node->data;
+    if (atom->type != MAL_ATOM) {
+        printf("swap arg1 is not an atom\n");
+        return node->data;
+    }
+    if (node->next == NULL) {
+        printf("swap take two arg\n");
+        return NULL;
+    }
+    MalType * fn = node->next->data;
+
+    // wrap the fn, atom and args into a list to call EVAL
+    // EVAL is not included
+    // manual fn apply ?
+    // create a EVAL.h that expose EVAL from step6.c ?
+    // even now how can i get the env ?
+    // from the function maybe...
+    MalType * wraper = GC_MALLOC(sizeof(MalType));
+    wraper->type = MAL_LIST;
+    wraper->value.ListValue = GC_MALLOC(sizeof(node_t));
+
+    // list (fn, atom->value, arg1, arg2, ...)
+    append(wraper->value.ListValue, fn, sizeof(MalType));
+    append(wraper->value.ListValue, atom->value.AtomValue, sizeof(MalType));
+    // add args if any
+    node_t * arg = node->next->next;
+    while (arg != NULL) {
+        append(wraper->value.ListValue, arg->data, sizeof(MalType));
+        arg = arg->next;
+    }
+
+    MalType * ret = EVAL(wraper, fn->value.FnWraperValue->env);
+
+    // reset
+    memcpy(atom->value.AtomValue, ret, sizeof(MalType));
+
+    return atom->value.AtomValue;
+}
+
 MalType * wrap_function(MalType * (*func)(node_t * node)) {
     // make func a MalType
     MalType * Mal_func = GC_MALLOC(sizeof(MalType));
@@ -714,6 +867,27 @@ env_t * create_repl(){
     symbol_list->data = NULL;
 
     // yes, hard coded.
+    append(function_pointers_list, wrap_function(swap), sizeof(MalType));
+    append(symbol_list, "swap!", 5);
+
+    append(function_pointers_list, wrap_function(reset), sizeof(MalType));
+    append(symbol_list, "reset!", 6);
+
+    append(function_pointers_list, wrap_function(deref), sizeof(MalType));
+    append(symbol_list, "deref", 5);
+
+    append(function_pointers_list, wrap_function(atom_question_mark), sizeof(MalType));
+    append(symbol_list, "atom?", 5);
+
+    append(function_pointers_list, wrap_function(atom), sizeof(MalType));
+    append(symbol_list, "atom", 4);
+
+    append(function_pointers_list, wrap_function(slurp), sizeof(MalType));
+    append(symbol_list, "slurp", 5);
+
+    append(function_pointers_list, wrap_function(readstring), sizeof(MalType));
+    append(symbol_list, "read-string", 11);
+
     append(function_pointers_list, wrap_function(println), sizeof(MalType));
     append(symbol_list, "println", 7);
 

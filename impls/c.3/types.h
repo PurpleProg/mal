@@ -20,6 +20,7 @@ typedef enum {
     MAL_TRUE,
     MAL_FALSE,
     MAL_KEYWORD,
+    MAL_ATOM,
 } MalTypeEnum;
 
 typedef signed long MalInt;
@@ -47,6 +48,7 @@ typedef union {
     MalFalse * FalseValue;
     MalNil * NilValue;
     MalString * StringValue;
+    MalType * AtomValue;
 } MalTypeValue;
 
 

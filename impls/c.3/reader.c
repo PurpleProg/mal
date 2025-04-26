@@ -134,7 +134,7 @@ MalType * read_atom(reader_t * reader) {
 		}
 
 		atom->type = MAL_STRING;
-		atom->value.StringValue = GC_malloc(sizeof(MalString));
+		atom->value.StringValue = GC_malloc(strlen(token));
 		memcpy(atom->value.StringValue, new_string, strlen(new_string));
 		return atom;
 	}
@@ -147,9 +147,29 @@ MalType * read_atom(reader_t * reader) {
 		return atom;
 
 	}
+	// special forms
+	// true
+	if (strcmp(token, "true") == 0) {
+		MalType * true = GC_MALLOC(sizeof(MalType));
+		true->type = MAL_TRUE;
+		return true;
+	}
+	// false
+	if (strcmp(token, "false") == 0) {
+		MalType * false = GC_MALLOC(sizeof(MalType));
+		false->type = MAL_FALSE;
+		return false;
+	}
+	// nil
+	if (strcmp(token, "nil") == 0) {
+		MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+		nil_ret->type = MAL_NIL;
+		return nil_ret;
+	}
+
 	// if token is not a number nor a string nor a keyword, it's a symbol
 	atom->type = MAL_SYMBOL;
-	atom->value.SymbolValue = GC_malloc(sizeof(MalSymbol));
+	atom->value.SymbolValue = GC_malloc(strlen(token));
 	memcpy(atom->value.SymbolValue, token, strlen(token));
 
 	return atom;
@@ -158,9 +178,9 @@ MalType * read_atom(reader_t * reader) {
 
 node_t * reader_next(reader_t * reader) {
 	reader->position += 1;
-	// pop can make tokens NULL
-	pop(&(reader->tokens));
-	return reader->tokens;
+	   // pop can make tokens NULL
+	   pop(&(reader->tokens));
+	   return reader->tokens;
 }
 
 node_t * reader_peek(reader_t * reader) {

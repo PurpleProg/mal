@@ -256,6 +256,218 @@ MalType * EVAL_LIST_CORE_FN(MalType ** ASTp, env_t ** envp, node_t * element, Ma
 	return result;
 
 }
+MalType * EVAL_LIST_DEFAULT( env_t ** envp, node_t * element, int vector) {
+	env_t * env = *envp;
+
+	// list have nothing special, eval everything and return.
+	// define a list of evaluated element
+	node_t * evaluated_list = GC_MALLOC(sizeof(node_t));
+	evaluated_list->data = NULL;
+	evaluated_list->next = NULL;
+
+	// evaluate each element in the current list and add them
+	while (element != NULL) {
+		MalType * evaluated_element = EVAL(element->data, env);
+		if (evaluated_element != NULL) {
+			append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
+		}
+		element = element->next;
+	};
+
+	// wrap evaluated list in a MalType
+	MalType * wrapper = GC_MALLOC(sizeof(MalType));
+	if (vector == 1) {
+		wrapper->type = MAL_VECTOR;
+	} else {
+		wrapper->type = MAL_LIST;
+	}
+	wrapper->value.ListValue = evaluated_list;
+	return wrapper;
+
+}
+MalType * EVAL_LIST_SYMBOL(MalType ** ASTp, env_t ** envp, node_t * element, int vector) {
+	MalType * AST = *ASTp;
+	env_t * env = *envp;
+
+	// intentional fall through
+	// special forms
+	char * symbol = ((MalType *)(element->data))->value.SymbolValue;
+	// def!
+	if (strcmp(symbol, "def!") == 0) {
+		if (element->next == NULL) {
+			printf("def! shall take two args");
+			return AST;
+		}
+		if (element->next->next == NULL) {
+			printf("def! shall take two args");
+			return AST;
+		}
+		MalSymbol * key = ((MalType *)(element->next->data))->value.SymbolValue;
+		MalType * value = EVAL(element->next->next->data, env);
+		if (value != NULL) {
+			set(env, key, value);
+		}
+		return value;
+	}
+	// let*
+	if (strcmp(symbol, "let*") == 0) {
+		if (element->next == NULL) {
+			printf("let* shall take two args");
+			return AST;
+		}
+		if (element->next->next == NULL) {
+			printf("let* shall take two args");
+			return AST;
+		}
+
+		// create the new_env
+		env_t * new_env = GC_MALLOC(sizeof(env_t));
+		new_env->outer = env;
+		map_t * map = GC_MALLOC(sizeof(map_t));
+		new_env->data = map;
+
+		// define the binding list
+		MalList * bindings_list = NULL;
+		if ( ((MalType *)(element->next->data))->type == MAL_LIST ||  ((MalType *)(element->next->data))->type == MAL_VECTOR) {
+			bindings_list = ((MalType *)(element->next->data))->value.ListValue;
+		} else {
+			printf("let* takes a list or a vector as arg :/\n");
+			return AST;
+		}
+
+		// evaluate the binding list
+		node_t * binding = bindings_list;
+		while (binding != NULL){
+			if (binding->next == NULL) {
+				printf("binding list is odd\n");
+				return AST;
+			}
+
+			MalSymbol * key = ((MalType *)(binding->data))->value.SymbolValue;
+			MalType * value = EVAL((MalType *)binding->next->data, new_env);
+			if (value != NULL) {
+				set(new_env, key, value);
+			}
+			binding = binding->next->next;
+		}
+
+		// TCO
+		*envp = new_env;
+		*ASTp = element->next->next->data;
+		return NULL;
+
+		// without TCO :
+		// MalType * third_arg = EVAL(element->next->next->data, new_env);
+		// return third_arg;
+	}
+	// do
+	if (strcmp(symbol, "do") == 0) {
+		if (element->next == NULL) {
+			printf("do shall take at least one arg");
+			return AST;
+		}
+
+		// skip "do" symbol
+		element = element->next;
+
+		// evaluate each element
+		// MalType * evaluated_element;
+		while (element->next != NULL) {
+			// evaluated_element = EVAL(element->data, env);
+			EVAL(element->data, env);
+			element = element->next;
+		};
+
+
+		*ASTp = element->data;
+		return NULL;
+
+		// return evaluated_element;
+	}
+	// if
+	if (strcmp(symbol, "if") == 0) {
+		if (element->next == NULL) {
+			printf("if shall take at least one arg");
+			MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+			nil_ret->type = MAL_NIL;
+			return nil_ret;
+		}
+		MalType * condition = EVAL(element->next->data, env);
+		if (condition->type == MAL_FALSE || condition->type == MAL_NIL || condition == NULL) {
+			// condition is false
+			if (element->next->next->next == NULL) {
+				MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+				nil_ret->type = MAL_NIL;
+				return nil_ret;
+			}
+			*ASTp = element->next->next->next->data;
+			return NULL;
+		} else {
+			// condition was true
+			if (element->next->next == NULL) {
+				printf("if without body\n");
+				MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+				nil_ret->type = MAL_NIL;
+				return nil_ret;
+			}
+			*ASTp = element->next->next->data;
+			return NULL;
+		}
+	}
+	// fn*
+	if (strcmp(symbol, "fn*") == 0) {
+		if (element->next == NULL) {
+			printf("fn shall take at least one arg");
+			MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+			nil_ret->type = MAL_NIL;
+			return nil_ret;
+		}
+		if (((MalType *)element->next->data)->type != MAL_LIST && ((MalType *)element->next->data)->type != MAL_VECTOR) {
+			printf("fn parameters should be a list or a vector\n");
+			MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+			nil_ret->type = MAL_NIL;
+			return nil_ret;
+		}
+		if (element->next == NULL) {
+			printf("fn dont have a body rn :/ \n");
+			MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+			nil_ret->type = MAL_NIL;
+			return nil_ret;
+		}
+
+		// create the function
+		MalFn * function = GC_MALLOC(sizeof(MalFn));
+		MalType * parameters = element->next->data;
+		MalType * body = element->next->next->data;
+
+		if (parameters->type != MAL_LIST && (parameters->type != MAL_VECTOR)) {
+			printf("args whould be a list or a vector\n");
+			return AST;
+		}
+
+		// function->param = formated_parameters;
+		function->param = parameters;
+		function->body = body;
+		function->env = env;
+
+		// wrap funtion for TCO
+		MalFnWraper * fnwraper = GC_MALLOC(sizeof(MalFnWraper));
+		fnwraper->ast = element->next->next->data; // body
+		fnwraper->param = element->next->data;
+		fnwraper->env = env;
+		fnwraper->fn = function;
+
+		// wrap function in MalType
+		MalType * mal_type_function = GC_MALLOC(sizeof(MalType));
+		mal_type_function->type = MAL_FN_WRAPER;
+		mal_type_function->value.FnWraperValue = fnwraper;
+
+		return mal_type_function;
+	}
+
+	// fallthroug to default in EVAL_LIST
+	return EVAL_LIST_DEFAULT(envp, element, vector);
+}
 
 MalType * EVAL_LIST(MalType ** ASTp, env_t ** envp, int vector) {
 	// trick that allow modifing the AST and env of EVAL from here
@@ -284,221 +496,10 @@ MalType * EVAL_LIST(MalType ** ASTp, env_t ** envp, int vector) {
 	//////////////////////////////////
 
 	switch (evaluated_first_element->type) {
-		case MAL_FN_WRAPER: {
-			// EVAL handle NULL for TCO and non-NULL for recurtion
-			return EVAL_LIST_FN_WRAPPER(ASTp, envp, element, evaluated_first_element);
-		}
-		case MAL_CORE_FN: {
-			return EVAL_LIST_CORE_FN(ASTp, envp, element, evaluated_first_element);
-		}
-		case MAL_SYMBOL: {
-			// intentional fall through
-			// special forms
-			char * symbol = ((MalType *)(element->data))->value.SymbolValue;
-			// def!
-			if (strcmp(symbol, "def!") == 0) {
-				if (element->next == NULL) {
-					printf("def! shall take two args");
-					return AST;
-				}
-				if (element->next->next == NULL) {
-					printf("def! shall take two args");
-					return AST;
-				}
-				MalSymbol * key = ((MalType *)(element->next->data))->value.SymbolValue;
-				MalType * value = EVAL(element->next->next->data, env);
-				if (value != NULL) {
-					set(env, key, value);
-				}
-				return value;
-			}
-			// let*
-			if (strcmp(symbol, "let*") == 0) {
-				if (element->next == NULL) {
-					printf("let* shall take two args");
-					return AST;
-				}
-				if (element->next->next == NULL) {
-					printf("let* shall take two args");
-					return AST;
-				}
-
-				// create the new_env
-				env_t * new_env = GC_MALLOC(sizeof(env_t));
-				new_env->outer = env;
-				map_t * map = GC_MALLOC(sizeof(map_t));
-				new_env->data = map;
-
-				// define the binding list
-				MalList * bindings_list = NULL;
-				if ( ((MalType *)(element->next->data))->type == MAL_LIST ||  ((MalType *)(element->next->data))->type == MAL_VECTOR) {
-					bindings_list = ((MalType *)(element->next->data))->value.ListValue;
-				} else {
-					printf("let* takes a list or a vector as arg :/\n");
-					return AST;
-				}
-
-				// evaluate the binding list
-				node_t * binding = bindings_list;
-				while (binding != NULL){
-					if (binding->next == NULL) {
-						printf("binding list is odd\n");
-						return AST;
-					}
-
-					MalSymbol * key = ((MalType *)(binding->data))->value.SymbolValue;
-					MalType * value = EVAL((MalType *)binding->next->data, new_env);
-					if (value != NULL) {
-						set(new_env, key, value);
-					}
-					binding = binding->next->next;
-				}
-
-				// TCO
-				*envp = new_env;
-				*ASTp = element->next->next->data;
-				return NULL;
-
-				// without TCO :
-				// MalType * third_arg = EVAL(element->next->next->data, new_env);
-				// return third_arg;
-			}
-			// do
-			if (strcmp(symbol, "do") == 0) {
-				if (element->next == NULL) {
-					printf("do shall take at least one arg");
-					return AST;
-				}
-
-				// skip "do" symbol
-				element = element->next;
-
-				// evaluate each element
-				// MalType * evaluated_element;
-				while (element->next != NULL) {
-					// evaluated_element = EVAL(element->data, env);
-					EVAL(element->data, env);
-					element = element->next;
-				};
-
-
-				*ASTp = element->data;
-				return NULL;
-
-				// return evaluated_element;
-			}
-			// if
-			if (strcmp(symbol, "if") == 0) {
-				if (element->next == NULL) {
-					printf("if shall take at least one arg");
-					MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-					nil_ret->type = MAL_NIL;
-					return nil_ret;
-				}
-				MalType * condition = EVAL(element->next->data, env);
-				if (condition->type == MAL_FALSE || condition->type == MAL_NIL || condition == NULL) {
-					// condition is false
-					if (element->next->next->next == NULL) {
-						MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-						nil_ret->type = MAL_NIL;
-						return nil_ret;
-					}
-					*ASTp = element->next->next->next->data;
-					return NULL;
-				} else {
-					// condition was true
-					if (element->next->next == NULL) {
-						printf("if without body\n");
-						MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-						nil_ret->type = MAL_NIL;
-						return nil_ret;
-					}
-					*ASTp = element->next->next->data;
-					return NULL;
-				}
-			}
-			// fn*
-			if (strcmp(symbol, "fn*") == 0) {
-				if (element->next == NULL) {
-					printf("fn shall take at least one arg");
-					MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-					nil_ret->type = MAL_NIL;
-					return nil_ret;
-				}
-				if (((MalType *)element->next->data)->type != MAL_LIST && ((MalType *)element->next->data)->type != MAL_VECTOR) {
-					printf("fn parameters should be a list or a vector\n");
-					MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-					nil_ret->type = MAL_NIL;
-					return nil_ret;
-				}
-				if (element->next == NULL) {
-					printf("fn dont have a body rn :/ \n");
-					MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-					nil_ret->type = MAL_NIL;
-					return nil_ret;
-				}
-
-				// create the function
-				MalFn * function = GC_MALLOC(sizeof(MalFn));
-				MalType * parameters = element->next->data;
-				MalType * body = element->next->next->data;
-
-				if (parameters->type != MAL_LIST && (parameters->type != MAL_VECTOR)) {
-					printf("args whould be a list or a vector\n");
-					return AST;
-				}
-
-				// function->param = formated_parameters;
-				function->param = parameters;
-				function->body = body;
-				function->env = env;
-
-				// wrap funtion for TCO
-				MalFnWraper * fnwraper = GC_MALLOC(sizeof(MalFnWraper));
-				fnwraper->ast = element->next->next->data; // body
-				fnwraper->param = element->next->data;
-				fnwraper->env = env;
-				fnwraper->fn = function;
-
-				// wrap function in MalType
-				MalType * mal_type_function = GC_MALLOC(sizeof(MalType));
-				mal_type_function->type = MAL_FN_WRAPER;
-				mal_type_function->value.FnWraperValue = fnwraper;
-
-				return mal_type_function;
-			}
-
-			// fallthrough to default
-			// remove the compiler warning
-			__attribute__((fallthrough));
-		}
-		default: {
-			// list have nothing special, eval everything and return.
-			// define a list of evaluated element
-			node_t * evaluated_list = GC_MALLOC(sizeof(node_t));
-			evaluated_list->data = NULL;
-			evaluated_list->next = NULL;
-
-			// evaluate each element in the current list and add them
-			while (element != NULL) {
-				MalType * evaluated_element = EVAL(element->data, env);
-				if (evaluated_element != NULL) {
-					append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
-				}
-				element = element->next;
-			};
-
-			// wrap evaluated list in a MalType
-			MalType * wrapper = GC_MALLOC(sizeof(MalType));
-			if (vector == 1) {
-				wrapper->type = MAL_VECTOR;
-			} else {
-				wrapper->type = MAL_LIST;
-			}
-			wrapper->value.ListValue = evaluated_list;
-			return wrapper;
-
-		}
+		case MAL_FN_WRAPER: {return EVAL_LIST_FN_WRAPPER(ASTp, envp, element, evaluated_first_element);}
+		case MAL_CORE_FN: {return EVAL_LIST_CORE_FN(ASTp, envp, element, evaluated_first_element);}
+		case MAL_SYMBOL: {return EVAL_LIST_SYMBOL(ASTp, envp, element, vector);}
+		default: {return EVAL_LIST_DEFAULT(envp, element, vector);}
 	}
 }
 

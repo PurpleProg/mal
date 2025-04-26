@@ -398,38 +398,12 @@ MalType * equal(node_t * node) {
         }
     }
     switch (arg1->type) {
-        case MAL_VECTOR: {
-            node_t * node1 = arg1->value.ListValue;
-            node_t * node2 = arg2->value.ListValue;
-            while (node1 != NULL && node2 != NULL) {
-                // if two elements are empty:
-                if (node1->data == NULL && node2->data == NULL) {
-                    return true;
-                } else if (node1->data == NULL || node2->data == NULL) {
-                    // lenght are different
-                    return false;
-                }
-
-                node_t * zipped = GC_MALLOC(sizeof(node_t));
-                zipped->data = NULL;
-                zipped->next = NULL;
-                append(zipped, node1->data, sizeof(MalType));
-                append(zipped, node2->data, sizeof(MalType));
-
-
-
-                if (equal(zipped)->type == MAL_FALSE) {
-                    return false;
-                }
-                node1 = node1->next;
-                node2 = node2->next;
-            }
-            // if lenght are different
-            if ((node1 == NULL) ^ (node2 == NULL)) {
-                return false;
-            }
-            return true;
-        }
+        case MAL_HASHMAP:
+            // fallback to list equality
+            // accesing ListValue instead of Hashmap value work here
+            // because bolth are typedef of node_t
+        case MAL_VECTOR:
+            // fallback to list equality
         case MAL_LIST: {
             node_t * node1 = arg1->value.ListValue;
             node_t * node2 = arg2->value.ListValue;
@@ -573,9 +547,6 @@ MalType * equal(node_t * node) {
     }
 
     printf("= fallback\n");
-    // manual breakpoint
-    char * a = NULL;
-    *(int *) a = 1;
     return false;
 }
 

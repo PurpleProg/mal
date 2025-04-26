@@ -214,6 +214,48 @@ MalType * EVAL_LIST_FN_WRAPPER(MalType ** ASTp, env_t ** envp, node_t * element,
 	*envp = create_env(f->env, f->param, args);
 	return NULL;
 }
+MalType * EVAL_LIST_CORE_FN(MalType ** ASTp, env_t ** envp, node_t * element, MalType * evaluated_first_element) {
+	MalType * AST = *ASTp;
+	env_t * env = *envp;
+
+	MalType * core_fn = evaluated_first_element;
+	if (core_fn->value.CoreFnValue == NULL) {
+		fprintf(stderr, "core_fn is null\n");
+		return AST;
+	}
+
+	// skip symbol
+	// this can make element NULL
+	element = element->next;
+
+	// add the rest of the list to a list of evaluated things
+
+	// define a list of evaluated element
+	node_t * evaluated_list = GC_MALLOC(sizeof(node_t));
+	evaluated_list->data = NULL;
+	evaluated_list->next = NULL;
+
+	// evaluate each element in the current list and add them
+	while (element != NULL) {
+		MalType * evaluated_element = EVAL(element->data, env);
+		//if (evaluated_element->type == MAL_LIST) {
+		//	// fix VECTORS
+		//	evaluated_element->type = ((MalType *)element->data)->type;
+		//}
+
+		if (evaluated_element == NULL) {
+			// just skip it
+			continue;
+		}
+		append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
+
+		element = element->next;
+	};
+
+	MalType * result = (*(MalCoreFn)core_fn->value.CoreFnValue)(evaluated_list);
+	return result;
+
+}
 
 MalType * EVAL_LIST(MalType ** ASTp, env_t ** envp, int vector) {
 	// trick that allow modifing the AST and env of EVAL from here
@@ -247,43 +289,7 @@ MalType * EVAL_LIST(MalType ** ASTp, env_t ** envp, int vector) {
 			return EVAL_LIST_FN_WRAPPER(ASTp, envp, element, evaluated_first_element);
 		}
 		case MAL_CORE_FN: {
-			MalType * core_fn = evaluated_first_element;
-			if (core_fn->value.CoreFnValue == NULL) {
-				fprintf(stderr, "core_fn is null\n");
-				return AST;
-			}
-
-			// skip symbol
-			// this can make element NULL
-			element = element->next;
-
-			// add the rest of the list to a list of evaluated things
-
-			// define a list of evaluated element
-			node_t * evaluated_list = GC_MALLOC(sizeof(node_t));
-			evaluated_list->data = NULL;
-			evaluated_list->next = NULL;
-
-			// evaluate each element in the current list and add them
-			while (element != NULL) {
-				MalType * evaluated_element = EVAL(element->data, env);
-				//if (evaluated_element->type == MAL_LIST) {
-				//	// fix VECTORS
-				//	evaluated_element->type = ((MalType *)element->data)->type;
-				//}
-
-				if (evaluated_element == NULL) {
-					// just skip it
-					continue;
-				}
-				append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
-
-				element = element->next;
-			};
-
-			MalType * result = (*(MalCoreFn)core_fn->value.CoreFnValue)(evaluated_list);
-			return result;
-
+			return EVAL_LIST_CORE_FN(ASTp, envp, element, evaluated_first_element);
 		}
 		case MAL_SYMBOL: {
 			// intentional fall through

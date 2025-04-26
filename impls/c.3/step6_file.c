@@ -81,57 +81,60 @@ MalType * READ(char * line) {
 	return read_str(line);
 }
 
+MalType * EVAL_SYMBOL(MalType * AST, env_t * env) {
+	// NOTE: return the function from the repl env
+	// or special forms as strings
+	char * symbol = AST->value.SymbolValue;
+	// def!
+	if (strcmp(symbol, "def!") == 0) {
+		return AST;
+	}
+	// let*
+	if (strcmp(symbol, "let*") == 0) {
+		return AST;
+	}
+	// fn*
+	if (strcmp(symbol, "fn*") == 0) {
+		return AST;
+	}
+	// if
+	if (strcmp(symbol, "if") == 0) {
+		return AST;
+	}
+	// do
+	if (strcmp(symbol, "do") == 0) {
+		return AST;
+	}
+	// true
+	if (strcmp(symbol, "true") == 0) {
+		MalType * true = GC_MALLOC(sizeof(MalType));
+		true->type = MAL_TRUE;
+		return true;
+	}
+	// false
+	if (strcmp(symbol, "false") == 0) {
+		MalType * false = GC_MALLOC(sizeof(MalType));
+		false->type = MAL_FALSE;
+		return false;
+	}
+	// nil
+	if (strcmp(symbol, "nil") == 0) {
+		MalType * nil_ret = GC_MALLOC(sizeof(MalType));
+		nil_ret->type = MAL_NIL;
+		return nil_ret;
+	}
+
+	return get(env, symbol);
+}
+
+
 MalType * EVAL(MalType * AST, env_t * env) {
 	while (1 == 1) {
 		if (AST == NULL) {
 			return AST;
 		}
 		switch (AST->type) {
-			case MAL_SYMBOL: {
-				// NOTE: return the function from the repl env
-				// or special forms as strings
-				char * symbol = AST->value.SymbolValue;
-				// def!
-				if (strcmp(symbol, "def!") == 0) {
-					return AST;
-				}
-				// let*
-				if (strcmp(symbol, "let*") == 0) {
-					return AST;
-				}
-				// fn*
-				if (strcmp(symbol, "fn*") == 0) {
-					return AST;
-				}
-				// if
-				if (strcmp(symbol, "if") == 0) {
-					return AST;
-				}
-				// do
-				if (strcmp(symbol, "do") == 0) {
-					return AST;
-				}
-				// true
-				if (strcmp(symbol, "true") == 0) {
-					MalType * true = GC_MALLOC(sizeof(MalType));
-					true->type = MAL_TRUE;
-					return true;
-				}
-				// false
-				if (strcmp(symbol, "false") == 0) {
-					MalType * false = GC_MALLOC(sizeof(MalType));
-					false->type = MAL_FALSE;
-					return false;
-				}
-				// nil
-				if (strcmp(symbol, "nil") == 0) {
-					MalType * nil_ret = GC_MALLOC(sizeof(MalType));
-					nil_ret->type = MAL_NIL;
-					return nil_ret;
-				}
-
-				return get(env, symbol);
-			}
+			case MAL_SYMBOL: {return EVAL_SYMBOL(AST, env);}
 			case MAL_LIST: {
 				node_t * element = AST->value.ListValue;
 				// if the list is empty

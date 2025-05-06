@@ -281,12 +281,12 @@ MalType *EVAL_LIST_DEFAULT(env_t **envp, node_t *element, int vector) {
     wrapper->value.ListValue = evaluated_list;
     return wrapper;
 }
+// NOTE: SPECIAL FORMS
 MalType *EVAL_LIST_SYMBOL(MalType **ASTp, env_t **envp, node_t *element,
                           int vector) {
     MalType *AST = *ASTp;
     env_t *env = *envp;
 
-    // intentional fall through
     // special forms
     char *symbol = ((MalType *)(element->data))->value.SymbolValue;
     // def!
@@ -462,6 +462,16 @@ MalType *EVAL_LIST_SYMBOL(MalType **ASTp, env_t **envp, node_t *element,
         mal_type_function->value.FnWraperValue = fnwraper;
 
         return mal_type_function;
+    }
+    // quote
+    if (strcmp(symbol, "quote") == 0) {
+        if (element->next == NULL) {
+            // (quote) -> nil
+            MalType *nil_ret = GC_MALLOC(sizeof(MalType));
+            nil_ret->type = MAL_NIL;
+            return nil_ret;
+        }
+        return element->next->data;
     }
 
     // fallthroug to default in EVAL_LIST

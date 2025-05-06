@@ -5,15 +5,14 @@
 #include "printer.h"
 #include "reader.h"
 #include "types.h"
+#include <gc/gc.h>
 #include <stdio.h>
 #include <string.h>
 
 // math
 MalType *add(node_t *node) {
     // add a list of signed long
-    if (node->data == NULL) {
-        return 0;
-    }
+    if (node->data == NULL) { return 0; }
 
     signed long result = 0;
     while (node != NULL) {
@@ -26,17 +25,15 @@ MalType *add(node_t *node) {
         node = node->next;
     };
 
-    MalType *MalResult = GC_MALLOC(sizeof(MalType));
-    MalResult->type = MAL_INT;
+    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
+    MalResult->type           = MAL_INT;
     MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
     memcpy(MalResult->value.IntValue, &result, sizeof(result));
     return MalResult;
 }
 MalType *sub(node_t *node) {
     // sub a list of signed long
-    if (node->data == NULL) {
-        return 0;
-    }
+    if (node->data == NULL) { return 0; }
 
     signed long result = 0;
 
@@ -47,10 +44,10 @@ MalType *sub(node_t *node) {
 
     signed long a = *((MalType *)node->data)->value.IntValue;
     signed long b = *((MalType *)node->next->data)->value.IntValue;
-    result = a - b;
+    result        = a - b;
 
-    MalType *MalResult = GC_MALLOC(sizeof(MalType));
-    MalResult->type = MAL_INT;
+    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
+    MalResult->type           = MAL_INT;
     MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
 
     memcpy(MalResult->value.IntValue, &result, sizeof(result));
@@ -58,9 +55,7 @@ MalType *sub(node_t *node) {
 }
 MalType *mult(node_t *node) {
     // mult a list of signed long
-    if (node->data == NULL) {
-        return 0;
-    }
+    if (node->data == NULL) { return 0; }
 
     signed long result = 1;
     do {
@@ -68,17 +63,15 @@ MalType *mult(node_t *node) {
         node = node->next;
     } while (node != NULL);
 
-    MalType *MalResult = GC_MALLOC(sizeof(MalType));
-    MalResult->type = MAL_INT;
+    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
+    MalResult->type           = MAL_INT;
     MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
     memcpy(MalResult->value.IntValue, &result, sizeof(result));
     return MalResult;
 }
 MalType *divide(node_t *node) {
     // divide two of signed long
-    if (node->data == NULL) {
-        return 0;
-    }
+    if (node->data == NULL) { return 0; }
 
     signed long result = 0;
 
@@ -96,8 +89,8 @@ MalType *divide(node_t *node) {
     // printf("a : %ld, b : %ld\n", a, b);
     result = a / b;
 
-    MalType *MalResult = GC_MALLOC(sizeof(MalType));
-    MalResult->type = MAL_INT;
+    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
+    MalResult->type           = MAL_INT;
     MalResult->value.IntValue = (MalInt *)GC_MALLOC(sizeof(MalInt));
     memcpy(MalResult->value.IntValue, &result, sizeof(result));
     return MalResult;
@@ -106,8 +99,8 @@ MalType *divide(node_t *node) {
 // strings
 MalType *prstr(node_t *node) {
     size_t buffer_size = 256;
-    char *string = GC_MALLOC(buffer_size);
-    string[0] = '\0';
+    char  *string      = GC_MALLOC(buffer_size);
+    string[0]          = '\0';
 
     while (node != NULL) {
         char *new_string = pr_str(node->data, 1);
@@ -118,18 +111,16 @@ MalType *prstr(node_t *node) {
             char *temp = GC_MALLOC(new_size);
             strcpy(temp, string);
             buffer_size = new_size;
-            string = temp;
+            string      = temp;
         }
 
         strcat(string, new_string);
-        if (node->next != NULL) {
-            strcat(string, " ");
-        }
+        if (node->next != NULL) { strcat(string, " "); }
         node = node->next;
     }
 
-    MalType *mal_string_ret = GC_MALLOC(sizeof(MalType));
-    mal_string_ret->type = MAL_STRING;
+    MalType *mal_string_ret           = GC_MALLOC(sizeof(MalType));
+    mal_string_ret->type              = MAL_STRING;
     mal_string_ret->value.StringValue = GC_MALLOC(strlen(string));
     memcpy(mal_string_ret->value.StringValue, string, strlen(string));
 
@@ -137,8 +128,8 @@ MalType *prstr(node_t *node) {
 }
 MalType *str(node_t *node) {
     size_t buffer_size = 256;
-    char *string = GC_MALLOC(buffer_size);
-    string[0] = '\0';
+    char  *string      = GC_MALLOC(buffer_size);
+    string[0]          = '\0';
 
     while (node != NULL) {
         char *new_string = pr_str(node->data, 0);
@@ -148,15 +139,15 @@ MalType *str(node_t *node) {
             char *temp = GC_MALLOC(new_size);
             strcpy(temp, string);
             buffer_size = new_size;
-            string = temp;
+            string      = temp;
         }
 
         strcat(string, new_string);
         node = node->next;
     }
 
-    MalType *mal_string_ret = GC_MALLOC(sizeof(MalType));
-    mal_string_ret->type = MAL_STRING;
+    MalType *mal_string_ret           = GC_MALLOC(sizeof(MalType));
+    mal_string_ret->type              = MAL_STRING;
     mal_string_ret->value.StringValue = GC_MALLOC(strlen(string));
     memcpy(mal_string_ret->value.StringValue, string, strlen(string));
 
@@ -164,8 +155,8 @@ MalType *str(node_t *node) {
 }
 MalType *prn(node_t *node) {
     size_t buffer_size = 256;
-    char *string = GC_MALLOC(buffer_size);
-    string[0] = '\0';
+    char  *string      = GC_MALLOC(buffer_size);
+    string[0]          = '\0';
 
     while (node != NULL) {
         char *new_string = pr_str(node->data, 1);
@@ -176,28 +167,26 @@ MalType *prn(node_t *node) {
             char *temp = GC_MALLOC(new_size);
             strcpy(temp, string);
             buffer_size = new_size;
-            string = temp;
+            string      = temp;
         }
 
         strcat(string, new_string);
-        if (node->next != NULL) {
-            strcat(string, " ");
-        }
+        if (node->next != NULL) { strcat(string, " "); }
         node = node->next;
     }
 
     printf("%s\n", string);
 
-    MalType *nil = GC_MALLOC(sizeof(MalType));
-    nil->type = MAL_NIL;
+    MalType *nil        = GC_MALLOC(sizeof(MalType));
+    nil->type           = MAL_NIL;
     nil->value.NilValue = NULL;
 
     return nil;
 }
 MalType *println(node_t *node) {
     size_t buffer_size = 256;
-    char *string = GC_MALLOC(buffer_size);
-    string[0] = '\0';
+    char  *string      = GC_MALLOC(buffer_size);
+    string[0]          = '\0';
 
     while (node != NULL) {
         char *new_string = pr_str(node->data, 0);
@@ -208,20 +197,18 @@ MalType *println(node_t *node) {
             char *temp = GC_MALLOC(new_size);
             strcpy(temp, string);
             buffer_size = new_size;
-            string = temp;
+            string      = temp;
         }
 
         strcat(string, new_string);
-        if (node->next != NULL) {
-            strcat(string, " ");
-        }
+        if (node->next != NULL) { strcat(string, " "); }
         node = node->next;
     }
 
     printf("%s\n", string);
 
-    MalType *nil = GC_MALLOC(sizeof(MalType));
-    nil->type = MAL_NIL;
+    MalType *nil        = GC_MALLOC(sizeof(MalType));
+    nil->type           = MAL_NIL;
     nil->value.NilValue = NULL;
 
     return nil;
@@ -265,14 +252,14 @@ MalType *slurp(node_t *node) {
     }
 
     // Read the file contents into the buffer
-    size_t bytes_read = fread(buffer, 1, file_size, file);
+    size_t bytes_read  = fread(buffer, 1, file_size, file);
     buffer[bytes_read] = '\0'; // Null-terminate the string
 
     fclose(file); // Close the file
 
     // wrap buffer in a MAL_SRING
-    MalType *string = GC_MALLOC(sizeof(MalType));
-    string->type = MAL_STRING;
+    MalType *string           = GC_MALLOC(sizeof(MalType));
+    string->type              = MAL_STRING;
     string->value.StringValue = buffer;
 
     return string; // Return the contents of the file
@@ -283,28 +270,28 @@ MalType *list(node_t *node) {
     if (node->data == NULL) {
         // list is empty, allocate a new one
         node_t *new_list = GC_MALLOC(sizeof(node_t));
-        new_list->next = NULL;
-        new_list->data = NULL;
-        node = new_list;
+        new_list->next   = NULL;
+        new_list->data   = NULL;
+        node             = new_list;
     }
 
-    MalType *ret = GC_MALLOC(sizeof(MalType));
-    ret->type = MAL_LIST;
+    MalType *ret         = GC_MALLOC(sizeof(MalType));
+    ret->type            = MAL_LIST;
     ret->value.ListValue = node;
     return ret;
 }
 MalType *list_question_mark(node_t *node) {
     MalType *bool = GC_MALLOC(sizeof(MalType));
     if (node->data == NULL) {
-        bool->type = MAL_FALSE;
+        bool->type             = MAL_FALSE;
         bool->value.FalseValue = NULL;
         return bool;
     }
     if (((MalType *)node->data)->type == MAL_LIST) {
-        bool->type = MAL_TRUE;
+        bool->type            = MAL_TRUE;
         bool->value.TrueValue = NULL;
     } else {
-        bool->type = MAL_FALSE;
+        bool->type             = MAL_FALSE;
         bool->value.FalseValue = NULL;
     }
     return bool;
@@ -312,31 +299,31 @@ MalType *list_question_mark(node_t *node) {
 MalType *empty_question_mark(node_t *node) {
     MalType *bool = GC_MALLOC(sizeof(MalType));
     if (node->data == NULL) {
-        bool->type = MAL_FALSE;
+        bool->type             = MAL_FALSE;
         bool->value.FalseValue = NULL;
         return bool;
     }
     if (!(((MalType *)node->data)->type == MAL_LIST ||
           ((MalType *)node->data)->type == MAL_VECTOR)) {
         printf("arg is not a list\n");
-        bool->type = MAL_FALSE;
+        bool->type             = MAL_FALSE;
         bool->value.FalseValue = NULL;
         return bool;
     }
     MalList *list = ((MalType *)node->data)->value.ListValue;
     if (list->data == NULL) {
-        bool->type = MAL_TRUE;
+        bool->type            = MAL_TRUE;
         bool->value.TrueValue = NULL;
     } else {
-        bool->type = MAL_FALSE;
+        bool->type             = MAL_FALSE;
         bool->value.FalseValue = NULL;
     }
     return bool;
 }
 MalType *count(node_t *node) {
-    MalType *ret = GC_MALLOC(sizeof(MalType));
-    ret->type = MAL_INT;
-    ret->value.IntValue = GC_MALLOC(sizeof(MalInt));
+    MalType *ret           = GC_MALLOC(sizeof(MalType));
+    ret->type              = MAL_INT;
+    ret->value.IntValue    = GC_MALLOC(sizeof(MalInt));
     *(ret->value.IntValue) = 0;
 
     node_t *new_node = GC_MALLOC(sizeof(node_t));
@@ -368,68 +355,92 @@ MalType *count(node_t *node) {
     return ret;
 }
 MalType *cons(node_t *node) {
+    MalType *ret         = GC_MALLOC(sizeof(MalType));
+    ret->type            = MAL_LIST;
+    node_t *new_list     = GC_MALLOC(sizeof(node_t));
+    ret->value.ListValue = new_list;
+
     if (node == NULL) {
         printf("cons need args");
-        return NULL;
+        return ret;
     }
+    if (node->next == NULL) {
+        printf("cons without list");
+        return ret;
+    }
+    if (node->next->data == NULL) {
+        // allocate a new_list, this one is empty
+        printf("node->next->data is NULL");
+        return ret;
+    }
+
+    // arg 1
     MalType *arg1 = node->data;
-    // no error handeling, fleme
-    // just write good code
-    // TODO: check next ! NULL
-    MalType *old_list = node->next->data;
-    node_t *new_list = GC_MALLOC(sizeof(node_t));
     append(new_list, arg1, sizeof(MalType));
 
+    // second arg
+    MalType *old_list = node->next->data;
+
     // append the rest of the list
-    node = old_list->value.ListValue;
-    while (node != NULL) {
-        append(new_list, node->data, sizeof(MalType));
-        node = node->next;
+    node_t *old_list_node = old_list->value.ListValue;
+    while (old_list_node != NULL && old_list_node->data != NULL) {
+        append(new_list, old_list_node->data, sizeof(MalType));
+        old_list_node = old_list_node->next;
     }
 
-    MalType *ret = GC_MALLOC(sizeof(MalType));
-    ret->type = MAL_LIST;
-    ret->value.ListValue = new_list;
     return ret;
 }
 MalType *concat(node_t *node) {
+    MalType *ret         = GC_MALLOC(sizeof(MalType));
+    ret->type            = MAL_LIST;
+    node_t *new_list     = GC_MALLOC(sizeof(node_t));
+    ret->value.ListValue = new_list;
+
     if (node == NULL) {
-        printf("cons need args");
-        return NULL;
+        printf("concat need args\n");
+        return ret;
     }
+    if (node->data == NULL) {
+        printf("concat arg1 is NULL\n");
+        return ret;
+    }
+    if (node->next == NULL) {
+        printf("concat without list\n");
+        return ret;
+    }
+    if (node->next->data == NULL) {
+        printf("node->next->data is NULL\n");
+        return ret;
+    }
+
     MalType *list1 = node->data;
-    // TODO: check next ! NULL
     MalType *list2 = node->next->data;
-    node_t *new_list = GC_MALLOC(sizeof(node_t));
 
     // append list1
     node_t *node1 = list1->value.ListValue;
-    while (node1 != NULL) {
+    while (node1 != NULL && node1->data != NULL) {
         append(new_list, node1->data, sizeof(MalType));
         node1 = node1->next;
     }
     // append list1
     node_t *node2 = list2->value.ListValue;
-    while (node2 != NULL) {
+    while (node2 != NULL && node2->data != NULL) {
         append(new_list, node2->data, sizeof(MalType));
         node2 = node2->next;
     }
 
-    MalType *ret = GC_MALLOC(sizeof(MalType));
-    ret->type = MAL_LIST;
-    ret->value.ListValue = new_list;
     return ret;
 }
 
 MalType *equal(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type = MAL_FALSE;
-    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    MalType *false           = GC_MALLOC(sizeof(MalType));
+    false->type              = MAL_FALSE;
+    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
     *false->value.FalseValue = 0;
 
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type = MAL_TRUE;
-    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    MalType *true          = GC_MALLOC(sizeof(MalType));
+    true->type             = MAL_TRUE;
+    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
     *true->value.TrueValue = 0;
 
     if (node == NULL) {
@@ -451,8 +462,8 @@ MalType *equal(node_t *node) {
 
     MalType *arg1 = GC_MALLOC(sizeof(MalType));
     MalType *arg2 = GC_MALLOC(sizeof(MalType));
-    arg1 = node->data;
-    arg2 = node->next->data;
+    arg1          = node->data;
+    arg2          = node->next->data;
 
     if (arg1->type != arg2->type) {
         if (!((arg1->type == MAL_LIST || arg1->type == MAL_VECTOR) &&
@@ -480,54 +491,42 @@ MalType *equal(node_t *node) {
             }
 
             node_t *zipped = GC_MALLOC(sizeof(node_t));
-            zipped->data = NULL;
-            zipped->next = NULL;
+            zipped->data   = NULL;
+            zipped->next   = NULL;
             append(zipped, node1->data, sizeof(MalType));
             append(zipped, node2->data, sizeof(MalType));
 
-            if (equal(zipped)->type == MAL_FALSE) {
-                return false;
-            }
+            if (equal(zipped)->type == MAL_FALSE) { return false; }
             node1 = node1->next;
             node2 = node2->next;
         }
         // if lenght are different
-        if ((node1 == NULL) ^ (node2 == NULL)) {
-            return false;
-        }
+        if ((node1 == NULL) ^ (node2 == NULL)) { return false; }
         return true;
     }
     case MAL_INT: {
         signed long int1 = *arg1->value.IntValue;
         signed long int2 = *arg2->value.IntValue;
-        if (int1 == int2) {
-            return true;
-        }
+        if (int1 == int2) { return true; }
         // false
         return false;
     }
     case MAL_STRING: {
         char *string1 = arg1->value.StringValue;
         char *string2 = arg2->value.StringValue;
-        if (strcmp(string1, string2) == 0) {
-            return true;
-        }
+        if (strcmp(string1, string2) == 0) { return true; }
         return false;
     }
     case MAL_KEYWORD: {
         char *symbol1 = arg1->value.SymbolValue;
         char *symbol2 = arg2->value.SymbolValue;
-        if (strcmp(symbol1, symbol2) == 0) {
-            return true;
-        }
+        if (strcmp(symbol1, symbol2) == 0) { return true; }
         return false;
     }
     case MAL_SYMBOL: {
         char *symbol1 = arg1->value.SymbolValue;
         char *symbol2 = arg2->value.SymbolValue;
-        if (strcmp(symbol1, symbol2) == 0) {
-            return true;
-        }
+        if (strcmp(symbol1, symbol2) == 0) { return true; }
         return false;
     }
     case MAL_FN_WRAPER: {
@@ -551,9 +550,7 @@ MalType *equal(node_t *node) {
         node_t *body_list = GC_MALLOC(sizeof(node_t));
         append(body_list, fn1->body, sizeof(MalType));
         append(body_list, fn2->body, sizeof(MalType));
-        if (!equal(body_list)) {
-            return false;
-        }
+        if (!equal(body_list)) { return false; }
 
         // param is a MalType->list of MalType->Symbol
         if (((MalType *)fn1->param)->type != MAL_LIST &&
@@ -572,23 +569,17 @@ MalType *equal(node_t *node) {
             char *symbol1 = ((MalType *)symbol_list_1->data)->value.SymbolValue;
             char *symbol2 = ((MalType *)symbol_list_2->data)->value.SymbolValue;
 
-            if (strcmp(symbol1, symbol2) != 0) {
-                return false;
-            }
+            if (strcmp(symbol1, symbol2) != 0) { return false; }
             symbol_list_1 = symbol_list_1->next;
             symbol_list_2 = symbol_list_2->next;
         }
         // if lenght are different
-        if ((symbol_list_1 == NULL) ^ (symbol_list_2 == NULL)) {
-            return false;
-        }
+        if ((symbol_list_1 == NULL) ^ (symbol_list_2 == NULL)) { return false; }
 
         // check if outer env is the same
         env_t *env1 = fn1->env->outer;
         env_t *env2 = fn2->env->outer;
-        if (env1 != env2) {
-            return false;
-        }
+        if (env1 != env2) { return false; }
 
         // TODO: check if the env themself are the same
         // (map_t *)env->data
@@ -599,9 +590,7 @@ MalType *equal(node_t *node) {
     }
     case MAL_CORE_FN: {
         // check if pointers are the same
-        if (arg1->value.CoreFnValue == arg2->value.CoreFnValue) {
-            return true;
-        }
+        if (arg1->value.CoreFnValue == arg2->value.CoreFnValue) { return true; }
         return false;
     }
     // types are the same, so singletones (true false nil) can return true
@@ -617,14 +606,14 @@ MalType *equal(node_t *node) {
 
 // comparators
 MalType *less(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type = MAL_FALSE;
-    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    MalType *false           = GC_MALLOC(sizeof(MalType));
+    false->type              = MAL_FALSE;
+    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
     *false->value.FalseValue = 0;
 
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type = MAL_TRUE;
-    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    MalType *true          = GC_MALLOC(sizeof(MalType));
+    true->type             = MAL_TRUE;
+    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
     *true->value.TrueValue = 0;
 
     if (node == NULL) {
@@ -647,27 +636,25 @@ MalType *less(node_t *node) {
     // maybe i dont need to allocate new memory here ?
     MalType *arg1 = GC_MALLOC(sizeof(MalType));
     MalType *arg2 = GC_MALLOC(sizeof(MalType));
-    arg1 = node->data;
-    arg2 = node->next->data;
+    arg1          = node->data;
+    arg2          = node->next->data;
 
     if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
         printf("< with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue < *arg2->value.IntValue) {
-        return true;
-    }
+    if (*arg1->value.IntValue < *arg2->value.IntValue) { return true; }
     return false;
 }
 MalType *more(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type = MAL_FALSE;
-    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    MalType *false           = GC_MALLOC(sizeof(MalType));
+    false->type              = MAL_FALSE;
+    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
     *false->value.FalseValue = 0;
 
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type = MAL_TRUE;
-    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    MalType *true          = GC_MALLOC(sizeof(MalType));
+    true->type             = MAL_TRUE;
+    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
     *true->value.TrueValue = 0;
 
     if (node == NULL) {
@@ -690,27 +677,25 @@ MalType *more(node_t *node) {
     // maybe i dont need to allocate new memory here ?
     MalType *arg1 = GC_MALLOC(sizeof(MalType));
     MalType *arg2 = GC_MALLOC(sizeof(MalType));
-    arg1 = node->data;
-    arg2 = node->next->data;
+    arg1          = node->data;
+    arg2          = node->next->data;
 
     if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
         printf("> with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue > *arg2->value.IntValue) {
-        return true;
-    }
+    if (*arg1->value.IntValue > *arg2->value.IntValue) { return true; }
     return false;
 }
 MalType *equal_less(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type = MAL_FALSE;
-    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    MalType *false           = GC_MALLOC(sizeof(MalType));
+    false->type              = MAL_FALSE;
+    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
     *false->value.FalseValue = 0;
 
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type = MAL_TRUE;
-    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    MalType *true          = GC_MALLOC(sizeof(MalType));
+    true->type             = MAL_TRUE;
+    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
     *true->value.TrueValue = 0;
 
     if (node == NULL) {
@@ -733,27 +718,25 @@ MalType *equal_less(node_t *node) {
     // maybe i dont need to allocate new memory here ?
     MalType *arg1 = GC_MALLOC(sizeof(MalType));
     MalType *arg2 = GC_MALLOC(sizeof(MalType));
-    arg1 = node->data;
-    arg2 = node->next->data;
+    arg1          = node->data;
+    arg2          = node->next->data;
 
     if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
         printf("<= with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue <= *arg2->value.IntValue) {
-        return true;
-    }
+    if (*arg1->value.IntValue <= *arg2->value.IntValue) { return true; }
     return false;
 }
 MalType *equal_more(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type = MAL_FALSE;
-    false->value.FalseValue = GC_MALLOC(sizeof(MalFalse));
+    MalType *false           = GC_MALLOC(sizeof(MalType));
+    false->type              = MAL_FALSE;
+    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
     *false->value.FalseValue = 0;
 
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type = MAL_TRUE;
-    true->value.TrueValue = GC_MALLOC(sizeof(MalTrue));
+    MalType *true          = GC_MALLOC(sizeof(MalType));
+    true->type             = MAL_TRUE;
+    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
     *true->value.TrueValue = 0;
 
     if (node == NULL) {
@@ -776,16 +759,14 @@ MalType *equal_more(node_t *node) {
     // maybe i dont need to allocate new memory here ?
     MalType *arg1 = GC_MALLOC(sizeof(MalType));
     MalType *arg2 = GC_MALLOC(sizeof(MalType));
-    arg1 = node->data;
-    arg2 = node->next->data;
+    arg1          = node->data;
+    arg2          = node->next->data;
 
     if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
         printf(">= with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue >= *arg2->value.IntValue) {
-        return true;
-    }
+    if (*arg1->value.IntValue >= *arg2->value.IntValue) { return true; }
     return false;
 }
 
@@ -795,22 +776,20 @@ MalType *atom(node_t *node) {
         printf("atom must take an arg \n");
         return node->data;
     }
-    MalType *ret = GC_MALLOC(sizeof(MalType));
-    ret->type = MAL_ATOM;
+    MalType *ret         = GC_MALLOC(sizeof(MalType));
+    ret->type            = MAL_ATOM;
     ret->value.AtomValue = node->data;
     return ret;
 }
 MalType *atom_question_mark(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type = MAL_FALSE;
+    MalType *false          = GC_MALLOC(sizeof(MalType));
+    false->type             = MAL_FALSE;
     false->value.FalseValue = NULL;
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type = MAL_TRUE;
-    true->value.TrueValue = NULL;
+    MalType *true           = GC_MALLOC(sizeof(MalType));
+    true->type              = MAL_TRUE;
+    true->value.TrueValue   = NULL;
 
-    if (node->data == NULL) {
-        return false;
-    }
+    if (node->data == NULL) { return false; }
 
     if (((MalType *)node->data)->type == MAL_ATOM) {
         return true;
@@ -857,8 +836,8 @@ MalType *swap(node_t *node) {
     // create a EVAL.h that expose EVAL from step6.c ?
     // even now how can i get the env ?
     // from the function maybe...
-    MalType *wraper = GC_MALLOC(sizeof(MalType));
-    wraper->type = MAL_LIST;
+    MalType *wraper         = GC_MALLOC(sizeof(MalType));
+    wraper->type            = MAL_LIST;
     wraper->value.ListValue = GC_MALLOC(sizeof(node_t));
 
     // list (fn, atom->value, arg1, arg2, ...)
@@ -883,8 +862,8 @@ MalType *swap(node_t *node) {
 
 MalType *wrap_function(MalType *(*func)(node_t *node)) {
     // make func a MalType
-    MalType *Mal_func = GC_MALLOC(sizeof(MalType));
-    Mal_func->type = MAL_CORE_FN;
+    MalType *Mal_func           = GC_MALLOC(sizeof(MalType));
+    Mal_func->type              = MAL_CORE_FN;
     Mal_func->value.CoreFnValue = (MalCoreFn)func;
     return Mal_func;
 }
@@ -894,12 +873,12 @@ env_t *create_repl() {
     env_t *env = create_env(NULL, NULL, NULL);
 
     node_t *function_pointers_list = GC_MALLOC(sizeof(node_t));
-    function_pointers_list->next = NULL;
-    function_pointers_list->data = NULL;
+    function_pointers_list->next   = NULL;
+    function_pointers_list->data   = NULL;
 
     node_t *symbol_list = GC_MALLOC(sizeof(node_t));
-    symbol_list->next = NULL;
-    symbol_list->data = NULL;
+    symbol_list->next   = NULL;
+    symbol_list->data   = NULL;
 
     // yes, hard coded.
     append(function_pointers_list, wrap_function(concat), sizeof(MalType));
@@ -989,7 +968,7 @@ env_t *create_repl() {
     while (symbol_list != NULL && function_pointers_list != NULL) {
         set(env, symbol_list->data, function_pointers_list->data);
 
-        symbol_list = symbol_list->next;
+        symbol_list            = symbol_list->next;
         function_pointers_list = function_pointers_list->next;
     }
     if ((symbol_list == NULL) ^ (function_pointers_list == NULL)) {

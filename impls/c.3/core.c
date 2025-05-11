@@ -12,7 +12,9 @@
 // math
 MalType *add(node_t *node) {
     // add a list of signed long
-    if (node->data == NULL) { return 0; }
+    if (node->data == NULL) {
+        return 0;
+    }
 
     signed long result = 0;
     while (node != NULL) {
@@ -33,7 +35,9 @@ MalType *add(node_t *node) {
 }
 MalType *sub(node_t *node) {
     // sub a list of signed long
-    if (node->data == NULL) { return 0; }
+    if (node->data == NULL) {
+        return 0;
+    }
 
     signed long result = 0;
 
@@ -55,7 +59,9 @@ MalType *sub(node_t *node) {
 }
 MalType *mult(node_t *node) {
     // mult a list of signed long
-    if (node->data == NULL) { return 0; }
+    if (node->data == NULL) {
+        return 0;
+    }
 
     signed long result = 1;
     do {
@@ -71,7 +77,9 @@ MalType *mult(node_t *node) {
 }
 MalType *divide(node_t *node) {
     // divide two of signed long
-    if (node->data == NULL) { return 0; }
+    if (node->data == NULL) {
+        return 0;
+    }
 
     signed long result = 0;
 
@@ -115,7 +123,9 @@ MalType *prstr(node_t *node) {
         }
 
         strcat(string, new_string);
-        if (node->next != NULL) { strcat(string, " "); }
+        if (node->next != NULL) {
+            strcat(string, " ");
+        }
         node = node->next;
     }
 
@@ -171,7 +181,9 @@ MalType *prn(node_t *node) {
         }
 
         strcat(string, new_string);
-        if (node->next != NULL) { strcat(string, " "); }
+        if (node->next != NULL) {
+            strcat(string, " ");
+        }
         node = node->next;
     }
 
@@ -201,7 +213,9 @@ MalType *println(node_t *node) {
         }
 
         strcat(string, new_string);
-        if (node->next != NULL) { strcat(string, " "); }
+        if (node->next != NULL) {
+            strcat(string, " ");
+        }
         node = node->next;
     }
 
@@ -404,29 +418,23 @@ MalType *concat(node_t *node) {
         printf("concat arg1 is NULL\n");
         return ret;
     }
-    if (node->next == NULL) {
-        printf("concat without list\n");
-        return ret;
-    }
-    if (node->next->data == NULL) {
-        printf("node->next->data is NULL\n");
-        return ret;
-    }
 
-    MalType *list1 = node->data;
-    MalType *list2 = node->next->data;
+    // node is a list of lists, a list of args to concat
+    while (node != NULL && node->data != NULL) {
+        MalType *list      = node->data;
+        node_t  *list_node = list->value.ListValue;
+        if (list->type != MAL_LIST && list->type != MAL_VECTOR) {
+            printf("concat arg in not list nor vector\n");
+            // skipping...
+            node = node->next;
+            continue;
+        }
 
-    // append list1
-    node_t *node1 = list1->value.ListValue;
-    while (node1 != NULL && node1->data != NULL) {
-        append(new_list, node1->data, sizeof(MalType));
-        node1 = node1->next;
-    }
-    // append list1
-    node_t *node2 = list2->value.ListValue;
-    while (node2 != NULL && node2->data != NULL) {
-        append(new_list, node2->data, sizeof(MalType));
-        node2 = node2->next;
+        while (list_node != NULL && list_node->data != NULL) {
+            append(new_list, list_node->data, sizeof(MalType));
+            list_node = list_node->next;
+        }
+        node = node->next;
     }
 
     return ret;
@@ -496,37 +504,49 @@ MalType *equal(node_t *node) {
             append(zipped, node1->data, sizeof(MalType));
             append(zipped, node2->data, sizeof(MalType));
 
-            if (equal(zipped)->type == MAL_FALSE) { return false; }
+            if (equal(zipped)->type == MAL_FALSE) {
+                return false;
+            }
             node1 = node1->next;
             node2 = node2->next;
         }
         // if lenght are different
-        if ((node1 == NULL) ^ (node2 == NULL)) { return false; }
+        if ((node1 == NULL) ^ (node2 == NULL)) {
+            return false;
+        }
         return true;
     }
     case MAL_INT: {
         signed long int1 = *arg1->value.IntValue;
         signed long int2 = *arg2->value.IntValue;
-        if (int1 == int2) { return true; }
+        if (int1 == int2) {
+            return true;
+        }
         // false
         return false;
     }
     case MAL_STRING: {
         char *string1 = arg1->value.StringValue;
         char *string2 = arg2->value.StringValue;
-        if (strcmp(string1, string2) == 0) { return true; }
+        if (strcmp(string1, string2) == 0) {
+            return true;
+        }
         return false;
     }
     case MAL_KEYWORD: {
         char *symbol1 = arg1->value.SymbolValue;
         char *symbol2 = arg2->value.SymbolValue;
-        if (strcmp(symbol1, symbol2) == 0) { return true; }
+        if (strcmp(symbol1, symbol2) == 0) {
+            return true;
+        }
         return false;
     }
     case MAL_SYMBOL: {
         char *symbol1 = arg1->value.SymbolValue;
         char *symbol2 = arg2->value.SymbolValue;
-        if (strcmp(symbol1, symbol2) == 0) { return true; }
+        if (strcmp(symbol1, symbol2) == 0) {
+            return true;
+        }
         return false;
     }
     case MAL_FN_WRAPER: {
@@ -550,7 +570,9 @@ MalType *equal(node_t *node) {
         node_t *body_list = GC_MALLOC(sizeof(node_t));
         append(body_list, fn1->body, sizeof(MalType));
         append(body_list, fn2->body, sizeof(MalType));
-        if (!equal(body_list)) { return false; }
+        if (!equal(body_list)) {
+            return false;
+        }
 
         // param is a MalType->list of MalType->Symbol
         if (((MalType *)fn1->param)->type != MAL_LIST &&
@@ -569,17 +591,23 @@ MalType *equal(node_t *node) {
             char *symbol1 = ((MalType *)symbol_list_1->data)->value.SymbolValue;
             char *symbol2 = ((MalType *)symbol_list_2->data)->value.SymbolValue;
 
-            if (strcmp(symbol1, symbol2) != 0) { return false; }
+            if (strcmp(symbol1, symbol2) != 0) {
+                return false;
+            }
             symbol_list_1 = symbol_list_1->next;
             symbol_list_2 = symbol_list_2->next;
         }
         // if lenght are different
-        if ((symbol_list_1 == NULL) ^ (symbol_list_2 == NULL)) { return false; }
+        if ((symbol_list_1 == NULL) ^ (symbol_list_2 == NULL)) {
+            return false;
+        }
 
         // check if outer env is the same
         env_t *env1 = fn1->env->outer;
         env_t *env2 = fn2->env->outer;
-        if (env1 != env2) { return false; }
+        if (env1 != env2) {
+            return false;
+        }
 
         // TODO: check if the env themself are the same
         // (map_t *)env->data
@@ -590,7 +618,9 @@ MalType *equal(node_t *node) {
     }
     case MAL_CORE_FN: {
         // check if pointers are the same
-        if (arg1->value.CoreFnValue == arg2->value.CoreFnValue) { return true; }
+        if (arg1->value.CoreFnValue == arg2->value.CoreFnValue) {
+            return true;
+        }
         return false;
     }
     // types are the same, so singletones (true false nil) can return true
@@ -643,7 +673,9 @@ MalType *less(node_t *node) {
         printf("< with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue < *arg2->value.IntValue) { return true; }
+    if (*arg1->value.IntValue < *arg2->value.IntValue) {
+        return true;
+    }
     return false;
 }
 MalType *more(node_t *node) {
@@ -684,7 +716,9 @@ MalType *more(node_t *node) {
         printf("> with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue > *arg2->value.IntValue) { return true; }
+    if (*arg1->value.IntValue > *arg2->value.IntValue) {
+        return true;
+    }
     return false;
 }
 MalType *equal_less(node_t *node) {
@@ -725,7 +759,9 @@ MalType *equal_less(node_t *node) {
         printf("<= with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue <= *arg2->value.IntValue) { return true; }
+    if (*arg1->value.IntValue <= *arg2->value.IntValue) {
+        return true;
+    }
     return false;
 }
 MalType *equal_more(node_t *node) {
@@ -766,7 +802,9 @@ MalType *equal_more(node_t *node) {
         printf(">= with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue >= *arg2->value.IntValue) { return true; }
+    if (*arg1->value.IntValue >= *arg2->value.IntValue) {
+        return true;
+    }
     return false;
 }
 
@@ -789,7 +827,9 @@ MalType *atom_question_mark(node_t *node) {
     true->type              = MAL_TRUE;
     true->value.TrueValue   = NULL;
 
-    if (node->data == NULL) { return false; }
+    if (node->data == NULL) {
+        return false;
+    }
 
     if (((MalType *)node->data)->type == MAL_ATOM) {
         return true;

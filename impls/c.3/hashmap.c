@@ -9,11 +9,17 @@
 int map_set(map_t *map, char *key, void *value) {
     if (map_contains(map, key)) {
         node_t *current_node = map;
-        if (map == NULL) { printf("map is null\n"); }
+        if (map == NULL) {
+            printf("map is null\n");
+        }
         while (current_node != NULL) {
             // here data must be a MalSymbol (aka char *)
-            if (key == NULL) { printf("key is null"); }
-            if (current_node->data == NULL) { printf("data is null"); }
+            if (key == NULL) {
+                printf("key is null");
+            }
+            if (current_node->data == NULL) {
+                printf("data is null");
+            }
             if (strcmp(key, current_node->data) == 0) {
                 // replace old value with new one
                 current_node->next->data = value;
@@ -65,7 +71,9 @@ int map_contains(map_t *map, char *key) {
         // here data must be a MalSymbol (aka char *)
         // or is it ? spend hours because it was not (just why did i think it
         // would be)
-        if (strcmp(key, current_node->data) == 0) { return 1; }
+        if (strcmp(key, current_node->data) == 0) {
+            return 1;
+        }
         // skip values
         current_node = current_node->next->next;
     }

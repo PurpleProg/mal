@@ -3,11 +3,9 @@
 
 #include "types.h"
 
-
 typedef struct {
-    char operator;
-    MalType * operation;
+    char     operator;
+    MalType *operation;
 } Operation;
-
 
 #endif

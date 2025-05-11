@@ -3,9 +3,7 @@
 
 #include "types.h"
 
-
-char * pr_str(MalType * AST, int print_readably);
-char * pr_env(env_t * ent);
-
+char *pr_str(MalType *AST, int print_readably);
+char *pr_env(env_t *ent);
 
 #endif

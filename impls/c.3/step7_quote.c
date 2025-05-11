@@ -203,7 +203,9 @@ int main(int argc, char *argv[]) {
     return 1;
 }
 
-MalType *READ(char *line) { return read_str(line); }
+MalType *READ(char *line) {
+    return read_str(line);
+}
 
 MalType *EVAL_SYMBOL(MalType *AST, env_t *env) {
     // NOTE: return the function from the repl env
@@ -719,6 +721,10 @@ MalType *EVAL(MalType *AST, env_t *env) {
     }
 }
 
-char *PRINT(MalType *AST) { return pr_str(AST, 1); }
+char *PRINT(MalType *AST) {
+    return pr_str(AST, 1);
+}
 
-char *rep(char *line, env_t *env) { return PRINT(EVAL(READ(line), env)); }
+char *rep(char *line, env_t *env) {
+    return PRINT(EVAL(READ(line), env));
+}

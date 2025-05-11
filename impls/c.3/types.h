@@ -1,9 +1,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include "linked_list.h"
 #include "hashmap.h"
-
+#include "linked_list.h"
 
 // MalType
 typedef struct MalType MalType;
@@ -26,62 +25,61 @@ typedef enum {
 } MalTypeEnum;
 
 typedef signed long MalInt;
-typedef char MalSymbol;
-typedef char MalString;
-typedef node_t MalList;
-typedef MalType * (*MalCoreFn)(node_t *);
-typedef struct MalFn MalFn;
+typedef char        MalSymbol;
+typedef char        MalString;
+typedef node_t      MalList;
+typedef MalType *(*MalCoreFn)(node_t *);
+typedef struct MalFn       MalFn;
 typedef struct MalFnWraper MalFnWraper;
-typedef int MalTrue;
-typedef int MalFalse;
-typedef int MalNil;
-typedef map_t MalHashmap;
+typedef int                MalTrue;
+typedef int                MalFalse;
+typedef int                MalNil;
+typedef map_t              MalHashmap;
 
 // MAL_VECTOR use ListValue
 // MAL_KEYWORD use SybolValue
 // string and symbol could also share the same underlying type, but no.
 typedef union {
-    MalInt * IntValue;
-    MalSymbol * SymbolValue;
-    MalList * ListValue;
-    MalCoreFn CoreFnValue;
-    MalFn* FnValue;
-    MalFnWraper * FnWraperValue;
-    MalTrue * TrueValue;
-    MalFalse * FalseValue;
-    MalNil * NilValue;
-    MalString * StringValue;
-    MalType * AtomValue;
-    MalHashmap * HashmapValue;
+    MalInt      *IntValue;
+    MalSymbol   *SymbolValue;
+    MalList     *ListValue;
+    MalCoreFn    CoreFnValue;
+    MalFn       *FnValue;
+    MalFnWraper *FnWraperValue;
+    MalTrue     *TrueValue;
+    MalFalse    *FalseValue;
+    MalNil      *NilValue;
+    MalString   *StringValue;
+    MalType     *AtomValue;
+    MalHashmap  *HashmapValue;
 } MalTypeValue;
 
-
 struct MalType {
-    MalTypeEnum type;
+    MalTypeEnum  type;
     MalTypeValue value;
 };
 ////////////////////////
 
 // env
 typedef struct env {
-    struct env * outer;
-    map_t * data;
+    struct env *outer;
+    map_t      *data;
 } env_t;
 
 // Function
 // original fn* return type
 struct MalFn {
-    MalType * param;
-    MalType * body;
-    env_t * env;
+    MalType *param;
+    MalType *body;
+    env_t   *env;
 };
 // new wrapper arount fn*
 struct MalFnWraper {
-    MalType * ast;
-    MalType * param;
-    env_t * env;
+    MalType *ast;
+    MalType *param;
+    env_t   *env;
     // actual funciton
-    struct MalFn * fn;
+    struct MalFn *fn;
 };
 
 #endif

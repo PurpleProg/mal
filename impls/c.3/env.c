@@ -2,6 +2,7 @@
 #include "gc.h"
 #include "hashmap.h"
 #include "types.h"
+#include <gc/gc.h>
 #include <stdio.h>
 
 int set(env_t *env, MalSymbol *key, MalType *value) {
@@ -10,10 +11,10 @@ int set(env_t *env, MalSymbol *key, MalType *value) {
 
 MalType *get(env_t *env, MalSymbol *key) {
     MalType *ret = map_get(env->data, key);
-    if (ret == NULL && env->outer != NULL) {
+    if (ret->type == MAL_NIL && env->outer != NULL) {
         return get(env->outer, key);
     }
-    if (ret == NULL && env->outer == NULL) {
+    if (ret->type == MAL_NIL && env->outer == NULL) {
         printf("key : %s not found\n", key);
     }
     return ret;

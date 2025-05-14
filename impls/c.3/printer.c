@@ -13,6 +13,11 @@ char *pr_str(MalType *AST, int print_readably) {
         return string;
     }
 
+    if (AST->value.IntValue == NULL) {
+        printf("/!\\ AST.value is NULL but type is allocated\n");
+        return string;
+    }
+
     switch (AST->type) {
     case MAL_INT: {
         string = GC_malloc(sizeof(MalInt));

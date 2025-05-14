@@ -46,27 +46,8 @@ void append(node_t *head, void *new_data, size_t size) {
     }
     node->next = new_node;
 }
-
 int prepend(node_t **head, void *new_data, size_t size) {
     /* add something to the start, begining of the list */
-
-    // if head is null create a new node
-    if (head == NULL) {
-        head          = GC_MALLOC(sizeof(node_t));
-        (*head)->data = NULL;
-        // this will fallback to the second check
-    }
-
-    // if the data of head is empty, do not creat a new node.
-    if ((*head)->data == NULL) {
-        // allocate data
-        (*head)->data = GC_MALLOC(size);
-        if ((*head)->data == NULL) {
-            fprintf(stderr, "faild to allocate new data");
-        }
-        memcpy((*head)->data, new_data, size);
-        return 0;
-    }
 
     // allocate a new node
     node_t *new_node;
@@ -96,11 +77,22 @@ int prepend(node_t **head, void *new_data, size_t size) {
     return 0;
 }
 
-void reverse_list(node_t *head) {
-    node_t *new_list = GC_MALLOC(sizeof(node_t));
-    node_t *node     = head;
+int is_empty(node_t *head) {
+    if (head == NULL) {
+        return 1;
+    }
+    return (head->data == NULL);
+}
+void reverse_list(node_t *src, node_t **dest) {
+    // prepend
+    if (!is_empty(*dest)) {
+        printf("reverse_list dest is not empty, prepending to it\n");
+    }
 
-    // while (node != NULL) {}
+    while (!is_empty(src)) {
+        prepend(dest, src->data, sizeof(int));
+        src = src->next;
+    }
 }
 
 void pop(node_t **head) {

@@ -17,123 +17,6 @@ char    *rep(char *line, env_t *env);
 
 env_t *repl_env;
 
-MalType *quasiquote(MalType *AST) {
-    // if ast is a list starting with the upquote symbol
-    // NOTE: vector here ?
-
-    /*
-    If ast is a list starting with the "unquote" symbol, return its second
-    element.
-
-    If ast is a list failing the previous test, the result will be a list
-    populated by the following process.
-
-    The result is initially an empty list. Iterate over each element elt of ast
-    in reverse order: If elt is a list starting with the "splice-unquote"
-    symbol, replace the current result with a list containing: the "concat"
-    symbol, the second element of elt, then the previous result. Else replace
-    the current result with a list containing: the "cons" symbol, the result of
-    calling quasiquote with elt as argument, then the previous result.
-
-    This process can also be described recursively:
-        If ast is empty return it unchanged. else let elt be its first element.
-        If elt is a list starting with the "splice-unquote" symbol, return a
-    list containing: the "concat" symbol, the second element of elt, then the
-    result of processing the rest of ast. Else return a list containing: the
-    "cons" symbol, the result of calling quasiquote with elt as argument, then
-    the result of processing the rest of ast.
-
-    If ast is a map or a symbol, return a list containing: the "quote" symbol,
-    then ast.
-
-    Else return ast unchanged. Such forms are not affected by evaluation, so you
-    may quote them as in the previous case if implementation is easier.
-    */
-
-    if (AST->type == MAL_LIST) {
-        node_t *list = AST->value.ListValue;
-
-        if (list->data == NULL) {
-            return AST;
-        }
-        MalType *elt = list->data;
-
-        if (elt->type == MAL_SYMBOL) {
-            if (strcmp(elt->value.SymbolValue, "unquote") == 0) {
-                if (list->next == NULL) {
-                    printf("unquoting nothing :/\n");
-                    // TODO: return nil maybe
-                    return NULL;
-                }
-                printf("unquote\n");
-                // return the second element
-                return list->next->data;
-            }
-        }
-        // AST is a list that DONT start with unquote
-
-        // cons symbol
-        MalType *cons           = GC_MALLOC(sizeof(MalType));
-        cons->type              = MAL_SYMBOL;
-        cons->value.SymbolValue = GC_MALLOC(4);
-        memcpy(cons->value.SymbolValue, "cons", 4);
-
-        // concat symbol
-        MalType *concat           = GC_MALLOC(sizeof(MalType));
-        concat->type              = MAL_SYMBOL;
-        concat->value.SymbolValue = GC_MALLOC(6);
-        memcpy(concat->value.SymbolValue, "concat", 6);
-
-        // list ret
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        node_t *list_ret     = GC_MALLOC(sizeof(node_t));
-        ret->value.ListValue = list_ret;
-
-        node_t *reverse_list = reverse_list(list);
-        if (elt->type == MAL_SYMBOL) {
-            if (strcmp(elt->value.SymbolValue, "splice-unquote") == 0) {
-                // non-recursive approach
-                if (list->next == NULL) {
-                    // TODO: return nil maybe
-                    return NULL;
-                }
-
-                node_t *new_list = GC_MALLOC(sizeof(node_t));
-                append(new_list, concat, sizeof(MalType));
-                // append(new_list, quasiquote(elt), sizeof(MalType));
-                // append(new_list, list_ret, sizeof(MalType));
-
-                // list new_ret
-                MalType *new_ret         = GC_MALLOC(sizeof(MalType));
-                new_ret->type            = MAL_LIST;
-                new_ret->value.ListValue = new_list;
-
-                return new_ret;
-            }
-        }
-
-    } else if (AST->type == MAL_SYMBOL || AST->type == MAL_HASHMAP) {
-        // list ret
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        node_t *list         = GC_MALLOC(sizeof(node_t));
-        ret->value.ListValue = list;
-
-        // quote symbol
-        MalType *quote           = GC_MALLOC(sizeof(MalType));
-        quote->type              = MAL_SYMBOL;
-        quote->value.SymbolValue = GC_MALLOC(5);
-        memcpy(quote->value.SymbolValue, "quote", 5);
-
-        append(list, quote, sizeof(MalType));
-        append(list, AST, sizeof(MalType));
-
-        return ret;
-    }
-    return AST;
-}
-
 MalType *eval(node_t *node) {
     MalType *ast = node->data;
     return EVAL(ast, repl_env);
@@ -148,7 +31,8 @@ int main(int argc, char *argv[]) {
     repl_env = create_repl();
 
     rep("(def! not (fn* (condition) (if condition false true)))", repl_env);
-    rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) "
+    rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp "
+        "f) "
         "\"\\nnil)\")) ) ))",
         repl_env);
 
@@ -190,6 +74,179 @@ int main(int argc, char *argv[]) {
     return 1;
 }
 
+MalType *quasiquote(MalType *AST) {
+    if (AST->type == MAL_LIST) {
+        node_t *list = AST->value.ListValue;
+
+        if (is_empty(list)) {
+            printf("quasiquote empty list, returning AST\n");
+            return AST;
+        }
+
+        MalType *first_element = list->data;
+
+        // if AST is a list starting with the unquote symbol
+        if (first_element->type == MAL_SYMBOL) {
+            if (strcmp(first_element->value.SymbolValue, "unquote") == 0) {
+                if (list->next == NULL) {
+                    printf("unquoting nothing :/\n");
+                    // TODO: return nil maybe
+                    return NULL;
+                }
+                printf("unquote\n");
+                // return the second element
+                return list->next->data;
+            }
+        }
+
+        // AST is a list that DONT start with unquote
+        printf("quasiquote first element is a list that dont start with "
+               "unquote\n");
+
+        // list result
+        node_t *list_result = GC_MALLOC(sizeof(node_t));
+
+        // iterate over reversed list
+        node_t *reversed_list = GC_MALLOC(sizeof(node_t));
+        reverse_list(list, &reversed_list);
+        node_t *node = reversed_list;
+        while (!is_empty(node)) {
+            MalType *elt = node->data;
+            // if elt is a list starting with "split-unquote"
+            if (elt->type == MAL_LIST) {
+                node_t *list = elt->value.ListValue;
+                if (is_empty(list)) {
+                    printf("quasiquote with empty list as arg\n");
+                    return AST;
+                }
+                MalType *elt_first_element = list->data;
+                if (elt_first_element->type == MAL_SYMBOL) {
+                    if (strcmp(elt_first_element->value.SymbolValue,
+                               "splice-unquote") == 0) {
+                        // replace the current result with a list containing:
+                        // the "concat" symbol,
+                        // the second element of elt,
+
+                        // new list result
+                        node_t *new_list_result = GC_MALLOC(sizeof(node_t));
+
+                        // the "concat" symbol,
+                        MalType *concat_symbol = GC_MALLOC(sizeof(MalType));
+                        concat_symbol->type    = MAL_SYMBOL;
+                        concat_symbol->value.SymbolValue = GC_MALLOC(6);
+                        memcpy(concat_symbol->value.SymbolValue, "concat", 6);
+
+                        append(new_list_result, concat_symbol, sizeof(MalType));
+
+                        // the second element of elt,
+                        MalType *next_elt_element = list->next->data;
+                        append(new_list_result, next_elt_element,
+                               sizeof(MalType));
+
+                        // then the previous result
+                        // wrap previous list_result in MalType
+                        MalType *previous_result = GC_MALLOC(sizeof(MalType));
+                        previous_result->type    = MAL_LIST;
+                        previous_result->value.ListValue = list_result;
+
+                        append(new_list_result, previous_result,
+                               sizeof(MalType));
+
+                        // replace current result with new_result
+                        // NOTE: is this dangling pointer ??
+                        // maybe use memcpy ?
+                        list_result = new_list_result;
+
+                        // skip else (alrady at 6 level of indent here)
+                        node = node->next;
+                        continue;
+                    } // if (first element == "splice-unquote")
+                } // if (first_element->type == MAL_SYMBOL)
+
+            } // if (elt->type == MAL_LIST)
+
+            // Else replace the current result with a list containing:
+            // the "cons" symbol,
+            // the result of calling quasiquote with elt as argument,
+            // then the previous result.
+
+            printf("quasiqote elts are not list\n");
+
+            // new list result
+            node_t *new_list_result = GC_MALLOC(sizeof(node_t));
+
+            // the "cons" symbol,
+            MalType *cons_symbol           = GC_MALLOC(sizeof(MalType));
+            cons_symbol->type              = MAL_SYMBOL;
+            cons_symbol->value.SymbolValue = GC_MALLOC(4);
+            memcpy(cons_symbol->value.SymbolValue, "cons", 4);
+
+            append(new_list_result, cons_symbol, sizeof(MalType));
+
+            // the result of calling quasiquote with elt as argument,
+            append(new_list_result, quasiquote(elt), sizeof(MalType));
+
+            // then the previous result
+            // wrap previous list_result in MalType
+            MalType *previous_result         = GC_MALLOC(sizeof(MalType));
+            previous_result->type            = MAL_LIST;
+            previous_result->value.ListValue = list_result;
+
+            append(new_list_result, previous_result, sizeof(MalType));
+
+            // replace current result with new_result
+            // NOTE: is this dangling pointer ??
+            // maybe use memcpy ?
+            list_result = new_list_result;
+
+            // wrap list_result in MalType
+            MalType *result         = GC_MALLOC(sizeof(MalType));
+            result->type            = MAL_LIST;
+            result->value.ListValue = list_result;
+
+            node = node->next;
+        } // iterate over elt in reverse order
+
+        // wrap list_result in MalType
+        MalType *result         = GC_MALLOC(sizeof(MalType));
+        result->type            = MAL_LIST;
+        result->value.ListValue = list_result;
+
+        printf("quasiquote returning: ");
+        printf("%s\n", pr_str(result, 0));
+
+        return result;
+
+    } else if (AST->type == MAL_SYMBOL || AST->type == MAL_HASHMAP) {
+        // If ast is a map or a symbol,
+        // return a list containing:
+        // the "quote" symbol,
+        // then ast.
+
+        // list ret
+        MalType *ret         = GC_MALLOC(sizeof(MalType));
+        ret->type            = MAL_LIST;
+        node_t *list         = GC_MALLOC(sizeof(node_t));
+        ret->value.ListValue = list;
+
+        // quote symbol
+        MalType *quote           = GC_MALLOC(sizeof(MalType));
+        quote->type              = MAL_SYMBOL;
+        quote->value.SymbolValue = GC_MALLOC(5);
+        memcpy(quote->value.SymbolValue, "quote", 5);
+
+        append(list, quote, sizeof(MalType));
+        append(list, AST, sizeof(MalType));
+
+        return ret;
+    }
+    // Else return ast unchanged.
+    // Such forms are not affected by evaluation,
+    // so you may quote them as in the previous case
+    // if implementation is easier.
+    return AST;
+}
+
 MalType *READ(char *line) {
     return read_str(line);
 }
@@ -227,7 +284,6 @@ MalType *EVAL_SYMBOL(MalType *AST, env_t *env) {
     }
     return ret;
 }
-
 MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
                               MalType *evaluated_first_element) {
     MalType *AST = *ASTp;
@@ -265,9 +321,8 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
             binds->data = binds->next->data;
             binds->next = NULL;
 
-            // make the next exprs a list (wraped in a maltype) that contain the
-            // rest of the exprs
-            // define it
+            // make the next exprs a list (wraped in a maltype) that contain
+            // the rest of the exprs define it
             MalType *wrap         = GC_MALLOC(sizeof(MalType));
             wrap->type            = MAL_LIST;
             wrap->value.ListValue = GC_MALLOC(sizeof(node_t));
@@ -388,7 +443,6 @@ MalType *EVAL_LIST_DEFAULT(env_t **envp, node_t *element, int vector) {
     wrapper->value.ListValue = evaluated_list;
     return wrapper;
 }
-
 MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
     // trick that allow modifing the AST and env of EVAL from here
     MalType *AST = *ASTp;
@@ -479,8 +533,8 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
             return NULL;
 
             // without TCO :
-            // MalType * third_arg = EVAL(element->next->next->data, new_env);
-            // return third_arg;
+            // MalType * third_arg = EVAL(element->next->next->data,
+            // new_env); return third_arg;
         }
         // do
         if (strcmp(symbol, "do") == 0) {
@@ -600,14 +654,14 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
         }
         // quasiquote
         if (strcmp(symbol, "quasiquote") == 0) {
-            printf("eval (quasiquote ...)\n");
             if (element->next == NULL) {
                 MalType *nil_ret = GC_MALLOC(sizeof(MalType));
                 nil_ret->type    = MAL_NIL;
                 return nil_ret;
             }
             *ASTp = quasiquote(element->next->data);
-            printf("called quasiquote, ast: %s\n", pr_str(*ASTp, 0));
+            printf("called quasiquote, ast: ");
+            printf("%s\n", pr_str(*ASTp, 0));
             return NULL;
         }
     }
@@ -631,7 +685,6 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
     }
     }
 }
-
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1 == 1) {
         // printf("EVAL %s\n", pr_str(AST, 0));

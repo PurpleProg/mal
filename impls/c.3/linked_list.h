@@ -9,6 +9,7 @@ typedef struct node {
     struct node *next;
 } node_t;
 
+int  prepend(node_t **head, void *new_data, size_t size);
 void append(node_t *head, void *new_data, size_t size);
 void pop(node_t **head);
 

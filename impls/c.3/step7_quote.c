@@ -61,13 +61,15 @@ MalType *quasiquote(MalType *AST) {
         if (elt->type == MAL_SYMBOL) {
             if (strcmp(elt->value.SymbolValue, "unquote") == 0) {
                 if (list->next == NULL) {
+                    printf("unquoting nothing :/\n");
                     // TODO: return nil maybe
                     return NULL;
                 }
+                printf("unquote\n");
+                // return the second element
                 return list->next->data;
             }
         }
-
         // AST is a list that DONT start with unquote
 
         // cons symbol
@@ -88,31 +90,17 @@ MalType *quasiquote(MalType *AST) {
         node_t *list_ret     = GC_MALLOC(sizeof(node_t));
         ret->value.ListValue = list_ret;
 
+        node_t *reverse_list = reverse_list(list);
         if (elt->type == MAL_SYMBOL) {
             if (strcmp(elt->value.SymbolValue, "splice-unquote") == 0) {
+                // non-recursive approach
                 if (list->next == NULL) {
                     // TODO: return nil maybe
                     return NULL;
                 }
-                /*
-                This process can also be described recursively:
-                If ast is empty return it unchanged.
-                else let elt be its first element.
-
-                If elt is a list starting with the "splice-unquote" symbol,
-                return a list containing:
-                    the "concat" symbol,
-                    the second element of elt,
-                    then the result of processing the rest of ast.
-                Else return a list containing:
-                    the "cons" symbol,
-                    the result of calling quasiquote with elt as argument,
-                    then the result of processing the rest of ast.
-                 */
 
                 node_t *new_list = GC_MALLOC(sizeof(node_t));
                 append(new_list, concat, sizeof(MalType));
-                // NOTE: im gonna kill myself
                 // append(new_list, quasiquote(elt), sizeof(MalType));
                 // append(new_list, list_ret, sizeof(MalType));
 

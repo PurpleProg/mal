@@ -21,14 +21,41 @@ MalType *read_form(reader_t *reader) {
 
     char *token = (char *)reader->tokens->data;
 
-    // reader macro @
-    if (*token == '@') {
-        /*************************/
-        /* @atom -> (deref atom) */
-        /*************************/
+    // dereferencing token to get the first char
+    switch (*token) {
+    case '(': return read_list(reader, 0);
+    case '[': return read_list(reader, 1);
+    case '{': return read_hashmap(reader);
+    /* ############ READER MACRO ############## */
+    case '\'': {
+        printf("' -> quote \n");
+        MalType *ret         = GC_MALLOC(sizeof(MalType));
+        ret->type            = MAL_LIST;
+        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
 
+        // wrap the string "quote" in a MalType
+        MalType *quote           = GC_MALLOC(sizeof(MalType));
+        quote->type              = MAL_SYMBOL;
+        quote->value.SymbolValue = GC_MALLOC(5);
+        memcpy(quote->value.SymbolValue, "quote", 5);
+
+        // get the next token and wrap it in a new reader
+        char     *next_token = (char *)reader_next(reader)->data;
+        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
+        new_reader->position = 0;
+        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
+
+        new_reader->tokens->data = next_token;
+        new_reader->tokens->next = reader_peek(reader)->next;
+
+        append(ret->value.ListValue, quote, sizeof(MalType));
+        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
+
+        return ret;
+    }
+    case '@': {
         // get the atom name and wrap it in a new reader
-        char     *atom_name  = reader->tokens->next->data;
+        char     *atom_name  = reader_next(reader)->data;
         reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
         new_reader->position = 0;
         new_reader->tokens   = GC_MALLOC(sizeof(node_t));
@@ -45,16 +72,11 @@ MalType *read_form(reader_t *reader) {
         memcpy(deref->value.SymbolValue, "deref", 5);
 
         append(ret->value.ListValue, deref, sizeof(MalType));
-        append(ret->value.ListValue, read_atom(new_reader), sizeof(MalType));
+        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
 
         return ret;
     }
 
-    // dereferencing token to get the first char
-    switch (*token) {
-    case '(': return read_list(reader, 0);
-    case '[': return read_list(reader, 1);
-    case '{': return read_hashmap(reader);
     default: return read_atom(reader);
     }
 }

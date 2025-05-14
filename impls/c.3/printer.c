@@ -14,7 +14,7 @@ char *pr_str(MalType *AST, int print_readably) {
     }
 
     if (AST->value.IntValue == NULL) {
-        printf("/!\\ AST.value is NULL but type is allocated\n");
+        printf("/!\\ AST.value is NULL but type is allocated : ");
         return string;
     }
 

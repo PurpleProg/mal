@@ -84,13 +84,14 @@ int is_empty(node_t *head) {
     return (head->data == NULL);
 }
 void reverse_list(node_t *src, node_t **dest) {
-    // prepend
+    // only work for list of MalType
     if (!is_empty(*dest)) {
         printf("reverse_list dest is not empty, prepending to it\n");
     }
 
     while (!is_empty(src)) {
-        prepend(dest, src->data, sizeof(int));
+        // NOTE: hard coded size type
+        prepend(dest, src->data, sizeof(MalType));
         src = src->next;
     }
 }

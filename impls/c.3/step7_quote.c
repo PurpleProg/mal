@@ -100,8 +100,6 @@ MalType *quasiquote(MalType *AST) {
         }
 
         // AST is a list that DONT start with unquote
-        printf("quasiquote first element is a list that dont start with "
-               "unquote\n");
 
         // list result
         node_t *list_result = GC_MALLOC(sizeof(node_t));
@@ -112,6 +110,15 @@ MalType *quasiquote(MalType *AST) {
         node_t *node = reversed_list;
         while (!is_empty(node)) {
             MalType *elt = node->data;
+            if (elt == NULL) {
+                printf("elt is NULL\n");
+            }
+            if (elt->value.ListValue == NULL) {
+                printf("elt->value is NULL\n");
+            }
+
+            printf("elt : %s\n", pr_str(elt, 0));
+
             // if elt is a list starting with "split-unquote"
             if (elt->type == MAL_LIST) {
                 node_t *list = elt->value.ListValue;
@@ -153,11 +160,9 @@ MalType *quasiquote(MalType *AST) {
                                sizeof(MalType));
 
                         // replace current result with new_result
-                        // NOTE: is this dangling pointer ??
-                        // maybe use memcpy ?
+                        // memcpy(list_result, new_list_result, sizeof(node_t));
                         list_result = new_list_result;
 
-                        // skip else (alrady at 6 level of indent here)
                         node = node->next;
                         continue;
                     } // if (first element == "splice-unquote")
@@ -169,8 +174,6 @@ MalType *quasiquote(MalType *AST) {
             // the "cons" symbol,
             // the result of calling quasiquote with elt as argument,
             // then the previous result.
-
-            printf("quasiqote elts are not list\n");
 
             // new list result
             node_t *new_list_result = GC_MALLOC(sizeof(node_t));
@@ -184,7 +187,9 @@ MalType *quasiquote(MalType *AST) {
             append(new_list_result, cons_symbol, sizeof(MalType));
 
             // the result of calling quasiquote with elt as argument,
-            append(new_list_result, quasiquote(elt), sizeof(MalType));
+            MalType *ret = quasiquote(elt);
+            // printf("rec quasiquote call : %s\n", pr_str(ret, 0));
+            append(new_list_result, ret, sizeof(MalType));
 
             // then the previous result
             // wrap previous list_result in MalType
@@ -195,14 +200,8 @@ MalType *quasiquote(MalType *AST) {
             append(new_list_result, previous_result, sizeof(MalType));
 
             // replace current result with new_result
-            // NOTE: is this dangling pointer ??
-            // maybe use memcpy ?
+            // memcpy(list_result, new_list_result, sizeof(node_t));
             list_result = new_list_result;
-
-            // wrap list_result in MalType
-            MalType *result         = GC_MALLOC(sizeof(MalType));
-            result->type            = MAL_LIST;
-            result->value.ListValue = list_result;
 
             node = node->next;
         } // iterate over elt in reverse order
@@ -211,10 +210,6 @@ MalType *quasiquote(MalType *AST) {
         MalType *result         = GC_MALLOC(sizeof(MalType));
         result->type            = MAL_LIST;
         result->value.ListValue = list_result;
-
-        printf("quasiquote returning: ");
-        printf("%s\n", pr_str(result, 0));
-
         return result;
 
     } else if (AST->type == MAL_SYMBOL || AST->type == MAL_HASHMAP) {
@@ -451,7 +446,6 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
     node_t *element = AST->value.ListValue;
     // if the list is empty
     if (element->data == NULL) {
-        printf("list is empty\n");
         return AST;
     }
 
@@ -659,9 +653,9 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 nil_ret->type    = MAL_NIL;
                 return nil_ret;
             }
+            printf("calling quasiquote, ast: %s\n", pr_str(*ASTp, 0));
             *ASTp = quasiquote(element->next->data);
-            printf("called quasiquote, ast: ");
-            printf("%s\n", pr_str(*ASTp, 0));
+            printf("called quasiquote, ast: %s\n", pr_str(*ASTp, 0));
             return NULL;
         }
     }

@@ -159,11 +159,10 @@ int main(int argc, char *argv[]) {
 
     repl_env = create_repl();
 
-    rep("(def! not (fn* (a) (if a false true)))", repl_env);
+    rep("(def! not (fn* (condition) (if condition false true)))", repl_env);
     rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp f) "
         "\"\\nnil)\")) ) ))",
         repl_env);
-    rep("(def! test (fn* (a) (str a)))", repl_env);
 
     // add eval to the repl
     set(repl_env, "eval", wrap_function(eval));
@@ -232,7 +231,12 @@ MalType *EVAL_SYMBOL(MalType *AST, env_t *env) {
     }
 
     MalType *ret = get(env, symbol);
-    // print_keys(env);
+    // returning NULL make TCO continue.
+    if (ret == NULL) {
+        MalType *nil = GC_MALLOC(sizeof(MalType));
+        nil->type    = MAL_NIL;
+        return nil;
+    }
     return ret;
 }
 
@@ -522,8 +526,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 return nil_ret;
             }
             MalType *condition = EVAL(element->next->data, env);
-            if (condition->type == MAL_FALSE || condition->type == MAL_NIL ||
-                condition == NULL) {
+            if (condition->type == MAL_FALSE || condition->type == MAL_NIL) {
                 // condition is false
                 if (element->next->next->next == NULL) {
                     MalType *nil_ret = GC_MALLOC(sizeof(MalType));
@@ -643,6 +646,8 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
 
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1 == 1) {
+        // printf("EVAL %s\n", pr_str(AST, 0));
+        // printf("env: %s\n", pr_env(env));
         if (AST == NULL) {
             return AST;
         }

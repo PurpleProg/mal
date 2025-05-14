@@ -44,11 +44,11 @@ void *map_get(map_t *map, char *key) {
 
     if (map == NULL) {
         printf("map is null\n");
-        return nil;
+        return NULL;
     }
     if (map->data == NULL) {
         printf("map is empty\n");
-        return nil;
+        return NULL;
     }
     while (current_node != NULL) {
         // here data must be a MalSymbol (aka char *)
@@ -58,7 +58,7 @@ void *map_get(map_t *map, char *key) {
         // skip values
         current_node = current_node->next->next;
     }
-    return nil;
+    return NULL;
 }
 
 int map_contains(map_t *map, char *key) {

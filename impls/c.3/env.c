@@ -11,10 +11,10 @@ int set(env_t *env, MalSymbol *key, MalType *value) {
 
 MalType *get(env_t *env, MalSymbol *key) {
     MalType *ret = map_get(env->data, key);
-    if (ret->type == MAL_NIL && env->outer != NULL) {
+    if (ret == NULL && env->outer != NULL) {
         return get(env->outer, key);
     }
-    if (ret->type == MAL_NIL && env->outer == NULL) {
+    if (ret == NULL && env->outer == NULL) {
         printf("key : %s not found\n", key);
     }
     return ret;

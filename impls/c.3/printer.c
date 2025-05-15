@@ -13,7 +13,8 @@ char *pr_str(MalType *AST, int print_readably) {
         return string;
     }
 
-    if (AST->value.IntValue == NULL && AST->type != MAL_NIL) {
+    if (AST->value.IntValue == NULL && AST->type != MAL_NIL &&
+        AST->type != MAL_TRUE && AST->type != MAL_FALSE) {
         printf("/!\\ AST.value is NULL but type is allocated : ");
         return string;
     }

@@ -3,6 +3,7 @@
 #include "linked_list.h"
 #include "printer.h"
 #include "types.h"
+#include <gc/gc.h>
 #include <pcre.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +20,7 @@ MalType *read_str(char *string) {
 
 MalType *read_form(reader_t *reader) {
 
-    char *token = (char *)reader->tokens->data;
+    char *token = reader_peek(reader);
 
     // dereferencing token to get the first char
     switch (*token) {
@@ -27,8 +28,9 @@ MalType *read_form(reader_t *reader) {
     case '[': return read_list(reader, 1);
     case '{': return read_hashmap(reader);
     /* ############ READER MACRO ############## */
+    // TODO: implement them
+    // not done
     case '\'': {
-        printf("' -> quote \n");
         MalType *ret         = GC_MALLOC(sizeof(MalType));
         ret->type            = MAL_LIST;
         ret->value.ListValue = GC_MALLOC(sizeof(node_t));
@@ -40,13 +42,13 @@ MalType *read_form(reader_t *reader) {
         memcpy(quote->value.SymbolValue, "quote", 5);
 
         // get the next token and wrap it in a new reader
-        char     *next_token = (char *)reader_next(reader)->data;
+        char     *next_token = reader_next(reader);
         reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
         new_reader->position = 0;
         new_reader->tokens   = GC_MALLOC(sizeof(node_t));
 
         new_reader->tokens->data = next_token;
-        new_reader->tokens->next = reader_peek(reader)->next;
+        new_reader->tokens->next = reader->tokens->next;
 
         append(ret->value.ListValue, quote, sizeof(MalType));
         append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
@@ -55,7 +57,7 @@ MalType *read_form(reader_t *reader) {
     }
     case '@': {
         // get the atom name and wrap it in a new reader
-        char     *atom_name  = reader_next(reader)->data;
+        char     *atom_name  = reader_next(reader);
         reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
         new_reader->position = 0;
         new_reader->tokens   = GC_MALLOC(sizeof(node_t));
@@ -76,6 +78,14 @@ MalType *read_form(reader_t *reader) {
 
         return ret;
     }
+    case '`': {
+
+        // replace ` by quasiquote
+        reader->tokens->data = GC_REALLOC(reader_peek(reader), 10);
+        memcpy(reader_peek(reader), "quasiquote", 10);
+
+        return read_form(reader);
+    }
 
     default: return read_atom(reader);
     }
@@ -87,28 +97,27 @@ MalType *read_hashmap(reader_t *reader) {
     hashmap->value.HashmapValue = GC_malloc(sizeof(MalHashmap));
 
     // handle single parentesis input
-    if (reader_peek(reader)->next == NULL) {
-        printf("only one token\n");
+    if (reader->tokens->next == NULL) {
+        printf("read hashmap only one token\n");
         return hashmap;
     }
 
-    char *token = (char *)reader_next(reader)->data;
+    char *token = reader_next(reader);
 
     char *end_token = "}";
     while (strcmp(token, end_token) != 0) {
 
         // if the tokens dont have a matching end token
         // or reach end of file
-        if (reader_peek(reader)->next == NULL) {
-            printf("current (last) token : '%s'\n",
-                   (char *)reader_peek(reader)->data);
+        if (reader->tokens->next == NULL) {
+            printf("last token : '%s'\n", reader_peek(reader));
             printf("unbalanced\n");
             return hashmap;
         }
 
         if (*token == ';') {
             // skip comments
-            token = reader_next(reader)->data;
+            token = reader_next(reader);
             continue;
         }
 
@@ -122,22 +131,21 @@ MalType *read_hashmap(reader_t *reader) {
             return hashmap;
         }
 
-        token = reader_next(reader)->data;
+        token = reader_next(reader);
 
         /********* after key, repeat for the value ***********/
 
         // if the tokens dont have a matching end token
         // or reach end of file
-        if (reader_peek(reader)->next == NULL) {
-            printf("current (last) token : '%s'\n",
-                   (char *)reader_peek(reader)->data);
+        if (reader->tokens->next == NULL) {
+            printf("last token : '%s'\n", reader_peek(reader));
             printf("unbalanced\n");
             return hashmap;
         }
 
         if (*token == ';') {
             // skip comments
-            token = reader_next(reader)->data;
+            token = reader_next(reader);
             continue;
         }
         MalType *value = GC_malloc(sizeof(MalType));
@@ -145,7 +153,7 @@ MalType *read_hashmap(reader_t *reader) {
 
         map_set(hashmap->value.HashmapValue, key->value.StringValue, value);
 
-        token = reader_next(reader)->data;
+        token = reader_next(reader);
     }
 
     return hashmap;
@@ -162,12 +170,12 @@ MalType *read_list(reader_t *reader, int vector) {
     list->value.ListValue->data = NULL;
 
     // handle single parentesis input
-    if (reader_peek(reader)->next == NULL) {
+    if (reader->tokens->next == NULL) {
         printf("only one token\n");
         return list;
     }
 
-    char *token = (char *)reader_next(reader)->data;
+    char *token = reader_next(reader);
 
     char *end_token;
     if (vector == 1) {
@@ -179,16 +187,15 @@ MalType *read_list(reader_t *reader, int vector) {
 
         // if the tokens dont have a matching end token
         // or reach end of file
-        if (reader_peek(reader)->next == NULL) {
-            printf("current (last) token : '%s'\n",
-                   (char *)reader_peek(reader)->data);
+        if (reader->tokens->next == NULL) {
+            printf("last token : '%s'\n", reader_peek(reader));
             printf("unbalanced\n");
             return list;
         }
 
         if (*token == ';') {
             // skip comments
-            token = reader_next(reader)->data;
+            token = reader_next(reader);
             continue;
         }
 
@@ -198,7 +205,7 @@ MalType *read_list(reader_t *reader, int vector) {
         // append the ret of read_form to the current MalList
         append(list->value.ListValue, (void *)new_form, sizeof(MalType));
 
-        token = reader_next(reader)->data;
+        token = reader_next(reader);
     }
 
     return list;
@@ -206,7 +213,7 @@ MalType *read_list(reader_t *reader, int vector) {
 MalType *read_atom(reader_t *reader) {
     MalType *atom = GC_malloc(sizeof(MalType));
 
-    char *token = (char *)reader->tokens->data;
+    char *token = reader_peek(reader);
 
     char *endptr = GC_malloc(strlen(token));
     long  number = strtol(token, &endptr, 10);
@@ -294,14 +301,14 @@ MalType *read_atom(reader_t *reader) {
     return atom;
 }
 
-node_t *reader_next(reader_t *reader) {
+char *reader_next(reader_t *reader) {
     reader->position += 1;
     // pop can make tokens NULL
     pop(&(reader->tokens));
-    return reader->tokens;
+    return reader->tokens->data;
 }
-node_t *reader_peek(reader_t *reader) {
-    return reader->tokens;
+char *reader_peek(reader_t *reader) {
+    return reader->tokens->data;
 }
 
 node_t *tokenize(char *string) {

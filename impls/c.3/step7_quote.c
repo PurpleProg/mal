@@ -117,8 +117,6 @@ MalType *quasiquote(MalType *AST) {
                 printf("elt->value is NULL\n");
             }
 
-            printf("elt : %s\n", pr_str(elt, 0));
-
             // if elt is a list starting with "split-unquote"
             if (elt->type == MAL_LIST) {
                 node_t *list = elt->value.ListValue;
@@ -653,9 +651,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 nil_ret->type    = MAL_NIL;
                 return nil_ret;
             }
-            printf("calling quasiquote, ast: %s\n", pr_str(*ASTp, 0));
             *ASTp = quasiquote(element->next->data);
-            printf("called quasiquote, ast: %s\n", pr_str(*ASTp, 0));
             return NULL;
         }
     }

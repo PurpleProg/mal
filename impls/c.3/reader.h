@@ -19,7 +19,7 @@ MalType *read_atom(reader_t *reader);
 
 node_t *tokenize(char *string);
 
-node_t *reader_next(reader_t *reader);
-node_t *reader_peek(reader_t *reader);
+char *reader_next(reader_t *reader);
+char *reader_peek(reader_t *reader);
 
 #endif

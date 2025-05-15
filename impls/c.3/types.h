@@ -78,6 +78,7 @@ struct MalFnWraper {
     MalType *ast;
     MalType *param;
     env_t   *env;
+    int      is_macro;
     // actual funciton
     struct MalFn *fn;
 };

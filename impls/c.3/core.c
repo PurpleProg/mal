@@ -439,6 +439,28 @@ MalType *concat(node_t *node) {
 
     return ret;
 }
+MalType *vec(node_t *node) {
+    if (node->data == NULL) {
+        // list is empty, allocate a new one
+        node_t *new_list = GC_MALLOC(sizeof(node_t));
+        new_list->next   = NULL;
+        new_list->data   = NULL;
+        node             = new_list;
+    }
+
+    MalType *arg = node->data;
+    if (arg->type != MAL_LIST && arg->type != MAL_VECTOR) {
+        printf("vec take a list of vector as arg\n");
+        MalType *nil = GC_MALLOC(sizeof(MalType));
+        nil->type    = MAL_NIL;
+        return nil;
+    }
+    MalType *ret         = GC_MALLOC(sizeof(MalType));
+    ret->type            = MAL_VECTOR;
+    ret->value.ListValue = arg->value.ListValue;
+
+    return ret;
+}
 
 MalType *equal(node_t *node) {
     MalType *false           = GC_MALLOC(sizeof(MalType));
@@ -898,8 +920,6 @@ MalType *swap(node_t *node) {
     return atom->value.AtomValue;
 }
 
-// quoting
-
 MalType *wrap_function(MalType *(*func)(node_t *node)) {
     // make func a MalType
     MalType *Mal_func           = GC_MALLOC(sizeof(MalType));
@@ -921,6 +941,9 @@ env_t *create_repl() {
     symbol_list->data   = NULL;
 
     // yes, hard coded.
+    append(function_pointers_list, wrap_function(vec), sizeof(MalType));
+    append(symbol_list, "vec", 3);
+
     append(function_pointers_list, wrap_function(concat), sizeof(MalType));
     append(symbol_list, "concat", 6);
 

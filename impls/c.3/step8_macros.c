@@ -719,7 +719,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
 }
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
-        printf("EVAL %s\n", pr_str(AST, 0));
+        // printf("EVAL %s\n", pr_str(AST, 0));
         // printf("env: %s\n", pr_env(env));
         if (AST == NULL) {
             return AST;

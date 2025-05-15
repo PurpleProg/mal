@@ -79,12 +79,84 @@ MalType *read_form(reader_t *reader) {
         return ret;
     }
     case '`': {
+        MalType *ret         = GC_MALLOC(sizeof(MalType));
+        ret->type            = MAL_LIST;
+        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
 
-        // replace ` by quasiquote
-        reader->tokens->data = GC_REALLOC(reader_peek(reader), 10);
-        memcpy(reader_peek(reader), "quasiquote", 10);
+        // wrap the string "quasiquote" in a MalType
+        MalType *quasiquote           = GC_MALLOC(sizeof(MalType));
+        quasiquote->type              = MAL_SYMBOL;
+        quasiquote->value.SymbolValue = GC_MALLOC(10);
+        memcpy(quasiquote->value.SymbolValue, "quasiquote", 10);
 
-        return read_form(reader);
+        // get the next token and wrap it in a new reader
+        char     *next_token = reader_next(reader);
+        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
+        new_reader->position = 0;
+        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
+
+        new_reader->tokens->data = next_token;
+        new_reader->tokens->next = reader->tokens->next;
+
+        append(ret->value.ListValue, quasiquote, sizeof(MalType));
+        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
+
+        return ret;
+    }
+    case '~': {
+        // might be ~ or ~@
+        if (strcmp(token, "~@") == 0) {
+            // splice-splice-unquote
+            MalType *ret         = GC_MALLOC(sizeof(MalType));
+            ret->type            = MAL_LIST;
+            ret->value.ListValue = GC_MALLOC(sizeof(node_t));
+
+            // wrap the string "splice-unquote" in a MalType
+            MalType *splice_unquote           = GC_MALLOC(sizeof(MalType));
+            splice_unquote->type              = MAL_SYMBOL;
+            splice_unquote->value.SymbolValue = GC_MALLOC(14);
+            memcpy(splice_unquote->value.SymbolValue, "splice-unquote", 14);
+
+            // get the next token and wrap it in a new reader
+            char     *next_token = reader_next(reader);
+            reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
+            new_reader->position = 0;
+            new_reader->tokens   = GC_MALLOC(sizeof(node_t));
+
+            new_reader->tokens->data = next_token;
+            new_reader->tokens->next = reader->tokens->next;
+
+            append(ret->value.ListValue, splice_unquote, sizeof(MalType));
+            append(ret->value.ListValue, read_form(new_reader),
+                   sizeof(MalType));
+
+            return ret;
+
+        } // if token == ~@
+        // else unquote
+        MalType *ret         = GC_MALLOC(sizeof(MalType));
+        ret->type            = MAL_LIST;
+        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
+
+        // wrap the string "unquote" in a MalType
+        MalType *unquote           = GC_MALLOC(sizeof(MalType));
+        unquote->type              = MAL_SYMBOL;
+        unquote->value.SymbolValue = GC_MALLOC(7);
+        memcpy(unquote->value.SymbolValue, "unquote", 7);
+
+        // get the next token and wrap it in a new reader
+        char     *next_token = reader_next(reader);
+        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
+        new_reader->position = 0;
+        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
+
+        new_reader->tokens->data = next_token;
+        new_reader->tokens->next = reader->tokens->next;
+
+        append(ret->value.ListValue, unquote, sizeof(MalType));
+        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
+
+        return ret;
     }
 
     default: return read_atom(reader);

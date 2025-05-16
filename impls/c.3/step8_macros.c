@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 }
 
 MalType *quasiquote(MalType *AST) {
-    if (AST->type == MAL_LIST) {
+    if (AST->type == MAL_LIST || AST->type == MAL_VECTOR) {
         node_t *list = AST->value.ListValue;
 
         if (is_empty(list)) {
@@ -118,10 +118,9 @@ MalType *quasiquote(MalType *AST) {
             }
 
             // if elt is a list starting with "split-unquote"
-            if (elt->type == MAL_LIST) {
+            if (elt->type == MAL_LIST || elt->type == MAL_VECTOR) {
                 node_t *list = elt->value.ListValue;
                 if (is_empty(list)) {
-                    printf("quasiquote with empty list as arg\n");
                     return AST;
                 }
                 MalType *elt_first_element = list->data;
@@ -166,7 +165,7 @@ MalType *quasiquote(MalType *AST) {
                     } // if (first element == "splice-unquote")
                 } // if (first_element->type == MAL_SYMBOL)
 
-            } // if (elt->type == MAL_LIST)
+            } // if (elt->type == MAL_LIST or vec)
 
             // Else replace the current result with a list containing:
             // the "cons" symbol,

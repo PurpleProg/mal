@@ -2,6 +2,7 @@
 #include "EVAL.h"
 #include "env.h"
 #include "gc.h"
+#include "linked_list.h"
 #include "printer.h"
 #include "reader.h"
 #include "types.h"
@@ -459,6 +460,109 @@ MalType *vec(node_t *node) {
     ret->type            = MAL_VECTOR;
     ret->value.ListValue = arg->value.ListValue;
 
+    return ret;
+}
+MalType *nth(node_t *node) {
+    MalType *nil = GC_MALLOC(sizeof(MalType));
+    nil->type    = MAL_NIL;
+
+    if (node == NULL) {
+        printf("nth need args");
+        return nil;
+    }
+    if (node->data == NULL) {
+        printf("nth args1 is empty list");
+        return nil;
+    }
+    if (node->next == NULL) {
+        printf("nth without indice");
+        return nil;
+    }
+    if (node->next->data == NULL) {
+        printf("nth node->next->data is NULL");
+        return nil;
+    }
+
+    // arg 1 list
+    MalType *arg1 = node->data;
+    if (arg1->type != MAL_LIST && arg1->type != MAL_VECTOR) {
+        printf("nth arg1 must be a list or a vector\n");
+        return nil;
+    }
+
+    // second arg index
+    MalType *arg2 = node->next->data;
+    if (arg2->type != MAL_INT) {
+        printf("nth arg2 must be a int\n");
+        return nil;
+    }
+
+    node_t *list         = arg1->value.ListValue;
+    int     target_index = *(arg2->value.IntValue);
+    if (target_index < 0) {
+        printf("index < 0\n");
+        return nil;
+    }
+    for (int i = 0; i < target_index; i++) {
+
+        list = list->next;
+        if (is_empty(list)) {
+            printf("nth index out of range\n");
+            return nil;
+        }
+    }
+    if (is_empty(list)) {
+        return nil;
+    }
+    return list->data;
+}
+MalType *first(node_t *node) {
+    // build a list : (arg, 0)
+    node_t *list = GC_MALLOC(sizeof(node_t));
+
+    // wrap 0 in MalType;
+    MalType *zero        = GC_MALLOC(sizeof(MalType));
+    long     tmp         = 0;
+    zero->type           = MAL_INT;
+    zero->value.IntValue = &tmp;
+
+    append(list, node->data, sizeof(MalType));
+    append(list, zero, sizeof(MalType));
+
+    return nth(list);
+}
+MalType *rest(node_t *node) {
+    MalType *nil = GC_MALLOC(sizeof(MalType));
+    nil->type    = MAL_NIL;
+
+    MalType *empty_list         = GC_MALLOC(sizeof(MalType));
+    empty_list->type            = MAL_LIST;
+    empty_list->value.ListValue = GC_MALLOC(sizeof(node_t));
+
+    MalType *arg = node->data;
+    if (arg == NULL) {
+        printf("rest takes an arg\n");
+        return nil;
+    }
+    if (arg->type != MAL_LIST && arg->type != MAL_VECTOR) {
+        printf("rest arg must be a list or a vecotr\n");
+        return empty_list;
+    }
+
+    node_t *list = arg->value.ListValue;
+    // skip first element
+    list = list->next;
+    // allocate a new list
+    node_t *new_list = GC_MALLOC(sizeof(node_t));
+    // copy list into new_list
+    while (!is_empty(list)) {
+        append(new_list, list->data, sizeof(MalType));
+        list = list->next;
+    }
+    // wrap new list in MalType
+    MalType *ret         = GC_MALLOC(sizeof(MalType));
+    ret->type            = MAL_LIST;
+    ret->value.ListValue = new_list;
     return ret;
 }
 
@@ -941,6 +1045,15 @@ env_t *create_repl() {
     symbol_list->data   = NULL;
 
     // yes, hard coded.
+    append(function_pointers_list, wrap_function(rest), sizeof(MalType));
+    append(symbol_list, "rest", 4);
+
+    append(function_pointers_list, wrap_function(first), sizeof(MalType));
+    append(symbol_list, "first", 5);
+
+    append(function_pointers_list, wrap_function(nth), sizeof(MalType));
+    append(symbol_list, "nth", 3);
+
     append(function_pointers_list, wrap_function(vec), sizeof(MalType));
     append(symbol_list, "vec", 3);
 

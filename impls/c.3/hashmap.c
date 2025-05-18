@@ -47,7 +47,7 @@ void *map_get(map_t *map, char *key) {
         return NULL;
     }
     if (map->data == NULL) {
-        printf("map is empty\n");
+        printf("hashmap get: map is empty\n");
         return NULL;
     }
     while (current_node != NULL) {

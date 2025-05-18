@@ -180,7 +180,7 @@ char *pr_env(env_t *env) {
         return NULL;
     }
     if (current_node->data == NULL) {
-        printf("map is empty\n");
+        printf("pr_env: map is empty\n");
         return NULL;
     }
     while (current_node != NULL) {

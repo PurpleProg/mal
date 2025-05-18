@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 
+// #define DEBUG
+
 MalType *READ(char *line);
 MalType *EVAL(MalType *AST, env_t *env);
 char    *PRINT(MalType *AST);
@@ -35,6 +37,33 @@ int main(int argc, char *argv[]) {
         "f) "
         "\"\\nnil)\")) ) ))",
         repl_env);
+    rep("(defmacro! cond "
+        "  (fn* (& xs) "
+        "    (" // func body
+        "      if (> (count xs) 0) "
+        "      (list "
+        "        'if "                 // if
+        "        (first xs) "          // condition
+        "        (if (> (count xs) 1)" // true
+        "          (nth xs 1)"
+        "          (throw \"odd number of forms to cond\")"
+        "        )"
+        "        (cons 'cond (rest (rest xs)))" // false
+        "      )"
+        "      (str \"no more\")"
+        "    )" // func body
+        "  )"
+        ")",
+        repl_env);
+    // test diff macro vs function
+    rep("(defmacro! test (fn* (& lst) (list (count lst) (pr-str lst))))",
+        repl_env);
+    rep("(def! ftest (fn* (& lst) (list (count lst) (pr-str lst))))", repl_env);
+    // unless macro
+    rep("(defmacro! unless (fn* (condition, iftrue, iffalse)"
+        " (if (not condition) iftrue iffalse)"
+        "))",
+        repl_env);
 
     // add eval to the repl
     set(repl_env, "eval", wrap_function(eval));
@@ -53,12 +82,8 @@ int main(int argc, char *argv[]) {
     }
     set(repl_env, "*ARGV*", args_list);
 
-    // DEBUG:
-    // printf("repl created : %s\n", pr_env(repl_env));
-
     // check if the interpretor is called with args
     if (argc > 1) {
-
         // call load-file on the first arg
         char *string = GC_MALLOC(strlen(argv[1]) + strlen("(load-file \"\")"));
         sprintf(string, "(load-file \"%s\")", argv[1]);
@@ -284,38 +309,48 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
 
     MalFnWraper *f = evaluated_first_element->value.FnWraperValue;
 
-    node_t *args = GC_MALLOC(sizeof(node_t));
-    args->data   = NULL;
-    args->next   = NULL;
-
     // skip evaluated first element;
-    node_t *node = element->next;
+    node_t *unevaluated_args = element->next;
+    node_t *evaluated_args   = GC_MALLOC(sizeof(node_t));
 
-    // eval args in current env
-    while (node != NULL && !do_eval_macro) {
-        MalType *arg = node->data;
+    // handle macros
+    if (!do_eval_macro) {
+        // eval args in current env
+        while (unevaluated_args != NULL) {
+            MalType *arg = unevaluated_args->data;
+            append(evaluated_args, EVAL(arg, env), sizeof(MalType));
+            unevaluated_args = unevaluated_args->next;
 
-        append(args, EVAL(arg, env), sizeof(MalType));
-        node = node->next;
-    }
-    if (do_eval_macro) {
-        args = node;
+            printf("eval args : %s \n", pr_str(arg, 0));
+        }
     }
 
     // check for Clojure-style variadic function parameters
-    // segfault here swap
-    // f is NULL
     node_t *binds = f->param->value.ListValue;
-    node_t *exprs = args;
+    node_t *exprs;
+    if (do_eval_macro) {
+        exprs = unevaluated_args;
+    } else {
+        exprs = evaluated_args;
+    }
+    // construc exprs
+    // (make a list of the rest of the args when & in func binds)
+    // iterate over func->binds
+    // apply to a copy without the &
     while (binds != NULL && exprs != NULL) {
         if (binds->data == NULL) {
             break;
         }
         char *bind = ((MalType *)binds->data)->value.SymbolValue;
         if (strcmp(bind, "&") == 0) {
+
+            printf("& found\n");
+
             // skip the & in the binds list
-            binds->data = binds->next->data;
-            binds->next = NULL;
+            // construct a new binds list without the & for eval
+            // but dont mutate the fuctions binds
+
+            // NOTE: mutate the function binds
 
             // make the next exprs a list (wraped in a maltype) that contain
             // the rest of the exprs define it
@@ -364,9 +399,81 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         exprs = exprs->next;
     }
 
+    // make a copy of binds without the & for evaluation
+    node_t *binds_without_and_symbol = GC_MALLOC(sizeof(node_t));
+    node_t *node                     = f->param->value.ListValue;
+    while (node != NULL) {
+        // skip &
+        if (node->data == NULL) {
+            // f with no binds
+            break;
+        }
+        char *bind = ((MalType *)node->data)->value.SymbolValue;
+        if (strcmp(bind, "&") == 0) {
+            node = node->next;
+            append(binds_without_and_symbol, node->data, sizeof(MalType));
+            break;
+        }
+
+        append(binds_without_and_symbol, node->data, sizeof(MalType));
+        node = node->next;
+    }
+    // wrap binds_without_and_symbol in a MalType
+    // why is it so hard naming things ?
+    MalType *binds_without_and_symbol_wrapped_in_a_maltype =
+        GC_MALLOC(sizeof(MalType));
+    binds_without_and_symbol_wrapped_in_a_maltype->type = MAL_LIST;
+    binds_without_and_symbol_wrapped_in_a_maltype->value.ListValue =
+        binds_without_and_symbol;
+
+    // skip TCO for macro,
+    // alow EVAL twice afterward
+    if (do_eval_macro) {
+        env_t *new_env =
+            create_env(f->env, binds_without_and_symbol_wrapped_in_a_maltype,
+                       unevaluated_args);
+
+        if (new_env == NULL) {
+            printf("macro new_env is NULL\n");
+        }
+        printf("f->param: %s\n", pr_str(f->param, 0));
+        printf("f->ast: %s\n", pr_str(f->ast, 0));
+        printf("binds no &: %s\n",
+               pr_str(binds_without_and_symbol_wrapped_in_a_maltype, 0));
+        printf("eval macro env: %s\n", pr_env(new_env));
+        // create a copy of ast
+        // to avoid mutating the macro while evaluating it's body
+        // NOTE: idk if it's necessary tho
+        // might remove this, idk
+        node_t  *list           = GC_MALLOC(sizeof(node_t));
+        MalType *func_body_copy = GC_MALLOC(sizeof(MalType));
+
+        // f->ast must be a MalList right ?
+        // surely that wont cause a segfault
+        if (f->ast->type == MAL_LIST) {
+            func_body_copy->type = MAL_LIST;
+            node_t *node         = f->ast->value.ListValue;
+            while (!is_empty(node)) {
+                append(list, node->data, sizeof(MalType));
+                node = node->next;
+            }
+            func_body_copy->value.ListValue = list;
+
+            printf("func body copy: %s\n", pr_str(func_body_copy, 0));
+
+            return EVAL(func_body_copy, new_env);
+        } else {
+            // dont create a copy
+            func_body_copy = f->ast;
+            return EVAL(func_body_copy, new_env);
+        }
+    }
     // TCO
     *ASTp = f->ast;
-    *envp = create_env(f->env, f->param, args);
+    *envp = create_env(f->env, binds_without_and_symbol_wrapped_in_a_maltype,
+                       evaluated_args);
+    printf("eval fn env: %s\n", pr_env(*envp));
+
     return NULL;
 }
 MalType *EVAL_LIST_CORE_FN(MalType **ASTp, env_t **envp, node_t *element,
@@ -700,9 +807,14 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
             // to the (unevaluated) remaining elements of ast,
             // producing a new form
 
-            return EVAL_LIST_FN_WRAPPER(ASTp, envp, element,
-                                        evaluated_first_element, 1);
-            // TCO continue;
+            // evaluate the new form in the env environment.
+            // Of course, instead of recursively calling EVAL,
+            // replace ast with the new form and restart the TCO loop.
+
+            MalType *evaluated_macro = EVAL_LIST_FN_WRAPPER(
+                ASTp, envp, element, evaluated_first_element, 1);
+
+            *ASTp = EVAL(evaluated_macro, *envp);
             return NULL;
         }
         return EVAL_LIST_FN_WRAPPER(ASTp, envp, element,
@@ -718,7 +830,9 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
 }
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
-        // printf("EVAL %s\n", pr_str(AST, 0));
+#ifdef DEBUG
+        printf("EVAL %s\n", pr_str(AST, 0));
+#endif
         // printf("env: %s\n", pr_env(env));
         if (AST == NULL) {
             return AST;

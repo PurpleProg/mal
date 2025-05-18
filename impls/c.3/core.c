@@ -341,6 +341,8 @@ MalType *count(node_t *node) {
     ret->value.IntValue    = GC_MALLOC(sizeof(MalInt));
     *(ret->value.IntValue) = 0;
 
+    printf("count: %s\n", pr_str(node->data, 0));
+
     node_t *new_node = GC_MALLOC(sizeof(node_t));
     if (node->data == NULL) {
         // arg is empty

@@ -762,6 +762,27 @@ MalType *equal(node_t *node) {
     return false;
 }
 
+MalType *macro_question_mark(node_t *node) {
+    MalType *false = GC_MALLOC(sizeof(MalType));
+    false->type    = MAL_FALSE;
+
+    MalType *true = GC_MALLOC(sizeof(MalType));
+    true->type    = MAL_TRUE;
+
+    if (is_empty(node)) {
+        return false;
+    }
+    MalType *arg = node->data;
+    printf("macro? ast: %s\n", pr_str(arg, 0));
+
+    if (arg->type == MAL_FN_WRAPER) {
+        if (arg->value.FnWraperValue->is_macro) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // comparators
 MalType *less(node_t *node) {
     MalType *false           = GC_MALLOC(sizeof(MalType));
@@ -1047,6 +1068,10 @@ env_t *create_repl() {
     symbol_list->data   = NULL;
 
     // yes, hard coded.
+    append(function_pointers_list, wrap_function(macro_question_mark),
+           sizeof(MalType));
+    append(symbol_list, "macro?", 6);
+
     append(function_pointers_list, wrap_function(rest), sizeof(MalType));
     append(symbol_list, "rest", 4);
 

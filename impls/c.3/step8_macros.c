@@ -69,18 +69,11 @@ int main(int argc, char *argv[]) {
     set(repl_env, "eval", NewMalCoreFunction(eval));
 
     // create *ARGV*
-    MalType *args_list         = GC_MALLOC(sizeof(MalType));
-    args_list->type            = MAL_LIST;
-    args_list->value.ListValue = GC_MALLOC(sizeof(node_t));
+    node_t *args_list = GC_MALLOC(sizeof(node_t));
     for (int i = 2; i < argc; i++) {
-        char    *arg                  = argv[i];
-        MalType *wraped_arg           = GC_MALLOC(sizeof(MalType));
-        wraped_arg->type              = MAL_STRING;
-        wraped_arg->value.StringValue = GC_MALLOC(strlen(arg));
-        strcat(wraped_arg->value.StringValue, argv[i]);
-        append(args_list->value.ListValue, wraped_arg, sizeof(MalType));
+        append(args_list, NewMalString(argv[i]), sizeof(MalType));
     }
-    set(repl_env, "*ARGV*", args_list);
+    set(repl_env, "*ARGV*", NewMalList(args_list));
 
     // check if the interpretor is called with args
     if (argc > 1) {
@@ -159,13 +152,8 @@ MalType *quasiquote(MalType *AST) {
                         // new list result
                         node_t *new_list_result = GC_MALLOC(sizeof(node_t));
 
-                        // the "concat" symbol,
-                        MalType *concat_symbol = GC_MALLOC(sizeof(MalType));
-                        concat_symbol->type    = MAL_SYMBOL;
-                        concat_symbol->value.SymbolValue = GC_MALLOC(6);
-                        memcpy(concat_symbol->value.SymbolValue, "concat", 6);
-
-                        append(new_list_result, concat_symbol, sizeof(MalType));
+                        append(new_list_result, NewMalSymbol("concat"),
+                               sizeof(MalType));
 
                         // the second element of elt,
                         MalType *next_elt_element = list->next->data;
@@ -173,16 +161,10 @@ MalType *quasiquote(MalType *AST) {
                                sizeof(MalType));
 
                         // then the previous result
-                        // wrap previous list_result in MalType
-                        MalType *previous_result = GC_MALLOC(sizeof(MalType));
-                        previous_result->type    = MAL_LIST;
-                        previous_result->value.ListValue = list_result;
-
-                        append(new_list_result, previous_result,
+                        append(new_list_result, NewMalList(list_result),
                                sizeof(MalType));
 
                         // replace current result with new_result
-                        // memcpy(list_result, new_list_result, sizeof(node_t));
                         list_result = new_list_result;
 
                         node = node->next;
@@ -201,12 +183,7 @@ MalType *quasiquote(MalType *AST) {
             node_t *new_list_result = GC_MALLOC(sizeof(node_t));
 
             // the "cons" symbol,
-            MalType *cons_symbol           = GC_MALLOC(sizeof(MalType));
-            cons_symbol->type              = MAL_SYMBOL;
-            cons_symbol->value.SymbolValue = GC_MALLOC(4);
-            memcpy(cons_symbol->value.SymbolValue, "cons", 4);
-
-            append(new_list_result, cons_symbol, sizeof(MalType));
+            append(new_list_result, NewMalSymbol("cons"), sizeof(MalType));
 
             // the result of calling quasiquote with elt as argument,
             MalType *ret = quasiquote(elt);
@@ -214,12 +191,7 @@ MalType *quasiquote(MalType *AST) {
             append(new_list_result, ret, sizeof(MalType));
 
             // then the previous result
-            // wrap previous list_result in MalType
-            MalType *previous_result         = GC_MALLOC(sizeof(MalType));
-            previous_result->type            = MAL_LIST;
-            previous_result->value.ListValue = list_result;
-
-            append(new_list_result, previous_result, sizeof(MalType));
+            append(new_list_result, NewMalList(list_result), sizeof(MalType));
 
             // replace current result with new_result
             // memcpy(list_result, new_list_result, sizeof(node_t));
@@ -228,11 +200,7 @@ MalType *quasiquote(MalType *AST) {
             node = node->next;
         } // iterate over elt in reverse order
 
-        // wrap list_result in MalType
-        MalType *result         = GC_MALLOC(sizeof(MalType));
-        result->type            = MAL_LIST;
-        result->value.ListValue = list_result;
-        return result;
+        return NewMalList(list_result);
 
     } else if (AST->type == MAL_SYMBOL || AST->type == MAL_HASHMAP) {
         // If ast is a map or a symbol,
@@ -240,22 +208,12 @@ MalType *quasiquote(MalType *AST) {
         // the "quote" symbol,
         // then ast.
 
-        // list ret
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        node_t *list         = GC_MALLOC(sizeof(node_t));
-        ret->value.ListValue = list;
+        node_t *list = GC_MALLOC(sizeof(node_t));
 
-        // quote symbol
-        MalType *quote           = GC_MALLOC(sizeof(MalType));
-        quote->type              = MAL_SYMBOL;
-        quote->value.SymbolValue = GC_MALLOC(5);
-        memcpy(quote->value.SymbolValue, "quote", 5);
-
-        append(list, quote, sizeof(MalType));
+        append(list, NewMalSymbol("quote"), sizeof(MalType));
         append(list, AST, sizeof(MalType));
 
-        return ret;
+        return NewMalList(list);
     }
     // Else return ast unchanged.
     // Such forms are not affected by evaluation,

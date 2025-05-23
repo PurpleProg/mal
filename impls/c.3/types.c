@@ -2,13 +2,6 @@
 #include <gc/gc.h>
 #include <string.h>
 
-MalType *NewMalSymbol(const char *string) {
-    MalType *result           = GC_MALLOC(sizeof(MalType));
-    result->type              = MAL_SYMBOL;
-    result->value.SymbolValue = GC_MALLOC(sizeof(MalSymbol));
-    memcpy(result->value.SymbolValue, string, sizeof(MalSymbol));
-    return result;
-}
 MalType *NewMalInt(MalInt a) {
     MalType *result        = GC_MALLOC(sizeof(MalType));
     result->type           = MAL_INT;
@@ -35,6 +28,13 @@ MalType *NewMalString(const char *string) {
     result->type              = MAL_STRING;
     result->value.StringValue = GC_MALLOC(strlen(string));
     memcpy(result->value.StringValue, string, strlen(string));
+    return result;
+}
+MalType *NewMalSymbol(const char *string) {
+    MalType *result           = GC_MALLOC(sizeof(MalType));
+    result->type              = MAL_SYMBOL;
+    result->value.SymbolValue = GC_MALLOC(strlen(string));
+    memcpy(result->value.SymbolValue, string, strlen(string));
     return result;
 }
 MalType *NewMalTrue() {

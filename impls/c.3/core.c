@@ -12,12 +12,12 @@
 
 // math
 MalType *add(node_t *node) {
-    // add a list of signed long
+    // add a list of MalInt
     if (node->data == NULL) {
         return 0;
     }
 
-    signed long result = 0;
+    MalInt result = 0;
     while (node != NULL) {
         MalType *integer = node->data;
         if (integer->type != MAL_INT) {
@@ -28,61 +28,48 @@ MalType *add(node_t *node) {
         node = node->next;
     };
 
-    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
-    MalResult->type           = MAL_INT;
-    MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-    memcpy(MalResult->value.IntValue, &result, sizeof(result));
-    return MalResult;
+    return NewMalInt(result);
 }
 MalType *sub(node_t *node) {
-    // sub a list of signed long
+    // sub a list of MalInt
     if (node->data == NULL) {
         return 0;
     }
 
-    signed long result = 0;
+    MalInt result = 0;
 
     if (node == NULL) {
         fprintf(stderr, "at least two number pls\n");
         return 0;
     }
 
-    signed long a = *((MalType *)node->data)->value.IntValue;
-    signed long b = *((MalType *)node->next->data)->value.IntValue;
-    result        = a - b;
+    MalInt a = *((MalType *)node->data)->value.IntValue;
+    MalInt b = *((MalType *)node->next->data)->value.IntValue;
+    result   = a - b;
 
-    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
-    MalResult->type           = MAL_INT;
-    MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-
-    memcpy(MalResult->value.IntValue, &result, sizeof(result));
-    return MalResult;
+    return NewMalInt(result);
 }
 MalType *mult(node_t *node) {
-    // mult a list of signed long
+    // mult a list of MalInt
     if (node->data == NULL) {
         return 0;
     }
 
-    signed long result = 1;
+    MalInt result = 1;
     do {
         result *= *((MalType *)node->data)->value.IntValue;
         node = node->next;
     } while (node != NULL);
 
-    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
-    MalResult->type           = MAL_INT;
-    MalResult->value.IntValue = GC_MALLOC(sizeof(MalInt));
-    memcpy(MalResult->value.IntValue, &result, sizeof(result));
-    return MalResult;
+    return NewMalInt(result);
 }
 MalType *divide(node_t *node) {
-    // divide two of signed long
+    // divide two of MalInt
     if (node->data == NULL) {
         return 0;
     }
 
-    signed long result = 0;
+    MalInt result = 0;
 
     if (node->next == NULL) {
         printf("divide must take two arg (not 0)");
@@ -92,17 +79,12 @@ MalType *divide(node_t *node) {
         return 0;
     } // else if (node->next->next->next != NULL) {
 
-    signed long a = *((MalType *)node->data)->value.IntValue;
-    signed long b = *((MalType *)node->next->data)->value.IntValue;
+    MalInt a = *((MalType *)node->data)->value.IntValue;
+    MalInt b = *((MalType *)node->next->data)->value.IntValue;
 
-    // printf("a : %ld, b : %ld\n", a, b);
     result = a / b;
 
-    MalType *MalResult        = GC_MALLOC(sizeof(MalType));
-    MalResult->type           = MAL_INT;
-    MalResult->value.IntValue = (MalInt *)GC_MALLOC(sizeof(MalInt));
-    memcpy(MalResult->value.IntValue, &result, sizeof(result));
-    return MalResult;
+    return NewMalInt(result);
 }
 
 // strings
@@ -363,7 +345,7 @@ MalType *count(node_t *node) {
         return ret;
     }
 
-    signed long counter = 0;
+    MalInt counter = 0;
     while (new_node != NULL) {
         counter += 1;
         new_node = new_node->next;
@@ -645,8 +627,8 @@ MalType *equal(node_t *node) {
         return true;
     }
     case MAL_INT: {
-        signed long int1 = *arg1->value.IntValue;
-        signed long int2 = *arg2->value.IntValue;
+        MalInt int1 = *arg1->value.IntValue;
+        MalInt int2 = *arg2->value.IntValue;
         if (int1 == int2) {
             return true;
         }

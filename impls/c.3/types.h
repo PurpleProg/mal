@@ -24,22 +24,22 @@ typedef enum {
     MAL_HASHMAP,
 } MalTypeEnum;
 
-typedef signed long MalInt;
-typedef char        MalSymbol;
-typedef char        MalString;
-typedef node_t      MalList;
-typedef MalType *(*MalCoreFn)(node_t *);
-typedef struct MalFn       MalFn;
-typedef struct MalFnWraper MalFnWraper;
+typedef signed long        MalInt;
+typedef char               MalSymbol;
+typedef char               MalString;
+typedef node_t             MalList;
 typedef int                MalTrue;
 typedef int                MalFalse;
 typedef int                MalNil;
 typedef map_t              MalHashmap;
+typedef struct MalFn       MalFn;
+typedef struct MalFnWraper MalFnWraper;
+typedef MalType *(*MalCoreFn)(node_t *);
 
 // MAL_VECTOR use ListValue
 // MAL_KEYWORD use SybolValue
 // string and symbol could also share the same underlying type, but no.
-typedef union {
+typedef union MalTypeValue {
     MalInt      *IntValue;
     MalSymbol   *SymbolValue;
     MalList     *ListValue;
@@ -82,5 +82,14 @@ struct MalFnWraper {
     // actual funciton
     struct MalFn *fn;
 };
+
+MalType *NewMalSymbol(const char *string);
+MalType *NewMalInt(MalInt a);
+MalType *NewMalList(MalList *list);
+MalType *NewMalVector(MalList *list);
+MalType *NewMalString(const char *string);
+MalType *NewMalTrue();
+MalType *NewMalFalse();
+MalType *NewMalNIL();
 
 #endif

@@ -321,7 +321,7 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
             append(evaluated_args, EVAL(arg, env), sizeof(MalType));
             unevaluated_args = unevaluated_args->next;
 
-            printf("eval args : %s \n", pr_str(arg, 0));
+            // printf("eval args : %s \n", pr_str(arg, 0));
         }
     }
 
@@ -436,11 +436,12 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         if (new_env == NULL) {
             printf("macro new_env is NULL\n");
         }
-        printf("f->param: %s\n", pr_str(f->param, 0));
-        printf("f->ast: %s\n", pr_str(f->ast, 0));
-        printf("binds no &: %s\n",
-               pr_str(binds_without_and_symbol_wrapped_in_a_maltype, 0));
-        printf("eval macro env: %s\n", pr_env(new_env));
+        // printf("f->param: %s\n", pr_str(f->param, 0));
+        // printf("f->ast: %s\n", pr_str(f->ast, 0));
+        // printf("binds no &: %s\n",
+        //        pr_str(binds_without_and_symbol_wrapped_in_a_maltype, 0));
+        // printf("eval macro env: %s\n", pr_env(new_env));
+
         // create a copy of ast
         // to avoid mutating the macro while evaluating it's body
         // NOTE: idk if it's necessary tho
@@ -472,7 +473,7 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
     *ASTp = f->ast;
     *envp = create_env(f->env, binds_without_and_symbol_wrapped_in_a_maltype,
                        evaluated_args);
-    printf("eval fn env: %s\n", pr_env(*envp));
+    // printf("eval fn env: %s\n", pr_env(*envp));
 
     return NULL;
 }

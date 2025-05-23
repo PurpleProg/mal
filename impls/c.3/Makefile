@@ -1,5 +1,5 @@
 CFLAGS = -Wall -g -Wextra -pedantic -O1
-SRCS = step8_macros.c core.c reader.c linked_list.c printer.c hashmap.c env.c
+SRCS = step8_macros.c types.c core.c reader.c linked_list.c printer.c hashmap.c env.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONNY: all clean

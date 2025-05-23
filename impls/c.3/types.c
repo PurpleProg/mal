@@ -32,9 +32,9 @@ MalType *NewMalVector(MalList *list) {
 }
 MalType *NewMalString(const char *string) {
     MalType *result           = GC_MALLOC(sizeof(MalType));
-    result->type              = MAL_SYMBOL;
-    result->value.StringValue = GC_MALLOC(sizeof(MalString));
-    memcpy(result->value.StringValue, string, sizeof(MalString));
+    result->type              = MAL_STRING;
+    result->value.StringValue = GC_MALLOC(strlen(string));
+    memcpy(result->value.StringValue, string, strlen(string));
     return result;
 }
 MalType *NewMalTrue() {

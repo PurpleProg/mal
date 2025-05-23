@@ -112,12 +112,7 @@ MalType *prstr(node_t *node) {
         node = node->next;
     }
 
-    MalType *mal_string_ret           = GC_MALLOC(sizeof(MalType));
-    mal_string_ret->type              = MAL_STRING;
-    mal_string_ret->value.StringValue = GC_MALLOC(strlen(string));
-    memcpy(mal_string_ret->value.StringValue, string, strlen(string));
-
-    return mal_string_ret;
+    return NewMalString(string);
 }
 MalType *str(node_t *node) {
     size_t buffer_size = 256;
@@ -139,12 +134,7 @@ MalType *str(node_t *node) {
         node = node->next;
     }
 
-    MalType *mal_string_ret           = GC_MALLOC(sizeof(MalType));
-    mal_string_ret->type              = MAL_STRING;
-    mal_string_ret->value.StringValue = GC_MALLOC(strlen(string));
-    memcpy(mal_string_ret->value.StringValue, string, strlen(string));
-
-    return mal_string_ret;
+    return NewMalString(string);
 }
 MalType *prn(node_t *node) {
     size_t buffer_size = 256;
@@ -172,11 +162,7 @@ MalType *prn(node_t *node) {
 
     printf("%s\n", string);
 
-    MalType *nil        = GC_MALLOC(sizeof(MalType));
-    nil->type           = MAL_NIL;
-    nil->value.NilValue = NULL;
-
-    return nil;
+    return NewMalNIL();
 }
 MalType *println(node_t *node) {
     size_t buffer_size = 256;
@@ -204,11 +190,7 @@ MalType *println(node_t *node) {
 
     printf("%s\n", string);
 
-    MalType *nil        = GC_MALLOC(sizeof(MalType));
-    nil->type           = MAL_NIL;
-    nil->value.NilValue = NULL;
-
-    return nil;
+    return NewMalNIL();
 }
 MalType *readstring(node_t *node) {
     if (((MalType *)node->data)->type != MAL_STRING) {
@@ -254,12 +236,7 @@ MalType *slurp(node_t *node) {
 
     fclose(file); // Close the file
 
-    // wrap buffer in a MAL_SRING
-    MalType *string           = GC_MALLOC(sizeof(MalType));
-    string->type              = MAL_STRING;
-    string->value.StringValue = buffer;
-
-    return string; // Return the contents of the file
+    return NewMalString(buffer); // Return the contents of the file
 }
 
 // lists

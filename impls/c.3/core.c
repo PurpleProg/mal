@@ -484,31 +484,24 @@ MalType *rest(node_t *node) {
 }
 
 MalType *equal(node_t *node) {
-    MalType *false           = GC_MALLOC(sizeof(MalType));
-    false->type              = MAL_FALSE;
-    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
-    *false->value.FalseValue = 0;
-
-    MalType *true          = GC_MALLOC(sizeof(MalType));
-    true->type             = MAL_TRUE;
-    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
-    *true->value.TrueValue = 0;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
 
     if (node == NULL) {
         printf("= with no arg \n");
-        return NULL;
+        return false;
     }
     if (node->data == NULL) {
         printf("= arg1 is NULL \n");
-        return NULL;
+        return false;
     }
     if (node->next == NULL) {
         printf("= with only one arg\n");
-        return NULL;
+        return false;
     }
     if (node->next->data == NULL) {
         printf("= arg2 is NULL \n");
-        return NULL;
+        return false;
     }
 
     MalType *arg1 = GC_MALLOC(sizeof(MalType));
@@ -678,11 +671,8 @@ MalType *equal(node_t *node) {
 }
 
 MalType *macro_question_mark(node_t *node) {
-    MalType *false = GC_MALLOC(sizeof(MalType));
-    false->type    = MAL_FALSE;
-
-    MalType *true = GC_MALLOC(sizeof(MalType));
-    true->type    = MAL_TRUE;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
 
     if (is_empty(node)) {
         return false;

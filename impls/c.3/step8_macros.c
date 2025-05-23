@@ -302,15 +302,9 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
 
             // NOTE: mutate the function binds
 
-            // make the next exprs a list (wraped in a maltype) that contain
-            // the rest of the exprs define it
-            MalType *wrap         = GC_MALLOC(sizeof(MalType));
-            wrap->type            = MAL_LIST;
-            wrap->value.ListValue = GC_MALLOC(sizeof(node_t));
-            memcpy(wrap->value.ListValue, exprs, sizeof(node_t));
-
-            // assigne the list
-            exprs->data = wrap;
+            // make the current exprs a Maltlist that contain
+            // the rest of the exprs
+            exprs->data = NewMalListCopy(exprs);
             exprs->next = NULL;
             break;
         }

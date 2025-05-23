@@ -86,6 +86,7 @@ struct MalFnWraper {
 MalType *NewMalSymbol(const char *string);
 MalType *NewMalInt(MalInt a);
 MalType *NewMalList(MalList *list);
+MalType *NewMalListCopy(MalList *list);
 MalType *NewMalVector(MalList *list);
 MalType *NewMalString(const char *string);
 MalType *NewMalTrue();

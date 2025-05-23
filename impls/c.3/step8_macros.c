@@ -233,29 +233,21 @@ MalType *EVAL_SYMBOL(MalType *AST, env_t *env) {
 
     // true
     if (strcmp(symbol, "true") == 0) {
-        MalType *true = GC_MALLOC(sizeof(MalType));
-        true->type    = MAL_TRUE;
-        return true;
+        return NewMalTrue();
     }
     // false
     if (strcmp(symbol, "false") == 0) {
-        MalType *false = GC_MALLOC(sizeof(MalType));
-        false->type    = MAL_FALSE;
-        return false;
+        return NewMalFalse();
     }
     // nil
     if (strcmp(symbol, "nil") == 0) {
-        MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-        nil_ret->type    = MAL_NIL;
-        return nil_ret;
+        return NewMalNIL();
     }
 
     MalType *ret = get(env, symbol);
     // returning NULL make TCO continue.
     if (ret == NULL) {
-        MalType *nil = GC_MALLOC(sizeof(MalType));
-        nil->type    = MAL_NIL;
-        return nil;
+        return NewMalNIL();
     }
     return ret;
 }

@@ -690,31 +690,25 @@ MalType *macro_question_mark(node_t *node) {
 
 // comparators
 MalType *less(node_t *node) {
-    MalType *false           = GC_MALLOC(sizeof(MalType));
-    false->type              = MAL_FALSE;
-    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
-    *false->value.FalseValue = 0;
-
-    MalType *true          = GC_MALLOC(sizeof(MalType));
-    true->type             = MAL_TRUE;
-    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
-    *true->value.TrueValue = 0;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
+    MalType *nil   = NewMalNIL();
 
     if (node == NULL) {
         printf("< with no arg \n");
-        return NULL;
+        return nil;
     }
     if (node->data == NULL) {
         printf("< arg1 is NULL \n");
-        return NULL;
+        return nil;
     }
     if (node->next == NULL) {
         printf("< with only one arg\n");
-        return NULL;
+        return nil;
     }
     if (node->next->data == NULL) {
         printf("< arg2 is NULL \n");
-        return NULL;
+        return nil;
     }
 
     // maybe i dont need to allocate new memory here ?
@@ -733,31 +727,25 @@ MalType *less(node_t *node) {
     return false;
 }
 MalType *more(node_t *node) {
-    MalType *false           = GC_MALLOC(sizeof(MalType));
-    false->type              = MAL_FALSE;
-    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
-    *false->value.FalseValue = 0;
-
-    MalType *true          = GC_MALLOC(sizeof(MalType));
-    true->type             = MAL_TRUE;
-    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
-    *true->value.TrueValue = 0;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
+    MalType *nil   = NewMalNIL();
 
     if (node == NULL) {
         printf("> with no arg \n");
-        return NULL;
+        return nil;
     }
     if (node->data == NULL) {
         printf("> arg1 is NULL \n");
-        return NULL;
+        return nil;
     }
     if (node->next == NULL) {
         printf("> with only one arg\n");
-        return NULL;
+        return nil;
     }
     if (node->next->data == NULL) {
         printf("> arg2 is NULL \n");
-        return NULL;
+        return nil;
     }
 
     // maybe i dont need to allocate new memory here ?
@@ -776,31 +764,25 @@ MalType *more(node_t *node) {
     return false;
 }
 MalType *equal_less(node_t *node) {
-    MalType *false           = GC_MALLOC(sizeof(MalType));
-    false->type              = MAL_FALSE;
-    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
-    *false->value.FalseValue = 0;
-
-    MalType *true          = GC_MALLOC(sizeof(MalType));
-    true->type             = MAL_TRUE;
-    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
-    *true->value.TrueValue = 0;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
+    MalType *nil   = NewMalNIL();
 
     if (node == NULL) {
         printf("<= with no arg \n");
-        return NULL;
+        return nil;
     }
     if (node->data == NULL) {
         printf("<= arg1 is NULL \n");
-        return NULL;
+        return nil;
     }
     if (node->next == NULL) {
         printf("<= with only one arg\n");
-        return NULL;
+        return nil;
     }
     if (node->next->data == NULL) {
         printf("<= arg2 is NULL \n");
-        return NULL;
+        return nil;
     }
 
     // maybe i dont need to allocate new memory here ?
@@ -811,7 +793,7 @@ MalType *equal_less(node_t *node) {
 
     if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
         printf("<= with non int parameters\n");
-        return NULL;
+        return nil;
     }
     if (*arg1->value.IntValue <= *arg2->value.IntValue) {
         return true;
@@ -819,31 +801,25 @@ MalType *equal_less(node_t *node) {
     return false;
 }
 MalType *equal_more(node_t *node) {
-    MalType *false           = GC_MALLOC(sizeof(MalType));
-    false->type              = MAL_FALSE;
-    false->value.FalseValue  = GC_MALLOC(sizeof(MalFalse));
-    *false->value.FalseValue = 0;
-
-    MalType *true          = GC_MALLOC(sizeof(MalType));
-    true->type             = MAL_TRUE;
-    true->value.TrueValue  = GC_MALLOC(sizeof(MalTrue));
-    *true->value.TrueValue = 0;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
+    MalType *nil   = NewMalNIL();
 
     if (node == NULL) {
         printf(">= with no arg \n");
-        return NULL;
+        return nil;
     }
     if (node->data == NULL) {
         printf(">= arg1 is NULL \n");
-        return NULL;
+        return nil;
     }
     if (node->next == NULL) {
         printf(">= with only one arg\n");
-        return NULL;
+        return nil;
     }
     if (node->next->data == NULL) {
         printf(">= arg2 is NULL \n");
-        return NULL;
+        return nil;
     }
 
     // maybe i dont need to allocate new memory here ?
@@ -854,7 +830,7 @@ MalType *equal_more(node_t *node) {
 
     if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
         printf(">= with non int parameters\n");
-        return NULL;
+        return nil;
     }
     if (*arg1->value.IntValue >= *arg2->value.IntValue) {
         return true;

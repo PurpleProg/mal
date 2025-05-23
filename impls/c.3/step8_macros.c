@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
         repl_env);
 
     // add eval to the repl
-    set(repl_env, "eval", wrap_function(eval));
+    set(repl_env, "eval", NewMalCoreFunction(eval));
 
     // create *ARGV*
     MalType *args_list         = GC_MALLOC(sizeof(MalType));

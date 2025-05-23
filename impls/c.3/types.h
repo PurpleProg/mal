@@ -92,5 +92,6 @@ MalType *NewMalTrue();
 MalType *NewMalFalse();
 MalType *NewMalNIL();
 MalType *NewMalAtom(MalType *MalObject);
+MalType *NewMalCoreFunction(MalCoreFn func);
 
 #endif

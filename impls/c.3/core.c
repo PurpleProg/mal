@@ -262,7 +262,6 @@ MalType *list_question_mark(node_t *node) {
     return NewMalFalse();
 }
 MalType *empty_question_mark(node_t *node) {
-    MalType *bool = GC_MALLOC(sizeof(MalType));
     if (node->data == NULL) {
         return NewMalFalse();
     }
@@ -920,14 +919,6 @@ MalType *swap(node_t *node) {
     return atom->value.AtomValue;
 }
 
-MalType *wrap_function(MalType *(*func)(node_t *node)) {
-    // make func a MalType
-    MalType *Mal_func           = GC_MALLOC(sizeof(MalType));
-    Mal_func->type              = MAL_CORE_FN;
-    Mal_func->value.CoreFnValue = (MalCoreFn)func;
-    return Mal_func;
-}
-
 env_t *create_repl() {
 
     env_t *env = create_env(NULL, NULL, NULL);
@@ -941,104 +932,108 @@ env_t *create_repl() {
     symbol_list->data   = NULL;
 
     // yes, hard coded.
-    append(function_pointers_list, wrap_function(macro_question_mark),
+    append(function_pointers_list, NewMalCoreFunction(macro_question_mark),
            sizeof(MalType));
     append(symbol_list, "macro?", 6);
 
-    append(function_pointers_list, wrap_function(rest), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(rest), sizeof(MalType));
     append(symbol_list, "rest", 4);
 
-    append(function_pointers_list, wrap_function(first), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(first), sizeof(MalType));
     append(symbol_list, "first", 5);
 
-    append(function_pointers_list, wrap_function(nth), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(nth), sizeof(MalType));
     append(symbol_list, "nth", 3);
 
-    append(function_pointers_list, wrap_function(vec), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(vec), sizeof(MalType));
     append(symbol_list, "vec", 3);
 
-    append(function_pointers_list, wrap_function(concat), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(concat), sizeof(MalType));
     append(symbol_list, "concat", 6);
 
-    append(function_pointers_list, wrap_function(cons), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(cons), sizeof(MalType));
     append(symbol_list, "cons", 4);
 
-    append(function_pointers_list, wrap_function(swap), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(swap), sizeof(MalType));
     append(symbol_list, "swap!", 5);
 
-    append(function_pointers_list, wrap_function(reset), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(reset), sizeof(MalType));
     append(symbol_list, "reset!", 6);
 
-    append(function_pointers_list, wrap_function(deref), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(deref), sizeof(MalType));
     append(symbol_list, "deref", 5);
 
-    append(function_pointers_list, wrap_function(atom_question_mark),
+    append(function_pointers_list, NewMalCoreFunction(atom_question_mark),
            sizeof(MalType));
     append(symbol_list, "atom?", 5);
 
-    append(function_pointers_list, wrap_function(atom), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(atom), sizeof(MalType));
     append(symbol_list, "atom", 4);
 
-    append(function_pointers_list, wrap_function(slurp), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(slurp), sizeof(MalType));
     append(symbol_list, "slurp", 5);
 
-    append(function_pointers_list, wrap_function(readstring), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(readstring),
+           sizeof(MalType));
     append(symbol_list, "read-string", 11);
 
-    append(function_pointers_list, wrap_function(println), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(println),
+           sizeof(MalType));
     append(symbol_list, "println", 7);
 
-    append(function_pointers_list, wrap_function(str), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(str), sizeof(MalType));
     append(symbol_list, "str", 3);
 
-    append(function_pointers_list, wrap_function(prn), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(prn), sizeof(MalType));
     append(symbol_list, "prn", 3);
 
-    append(function_pointers_list, wrap_function(prstr), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(prstr), sizeof(MalType));
     append(symbol_list, "pr-str", 6);
 
-    append(function_pointers_list, wrap_function(add), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(add), sizeof(MalType));
     append(symbol_list, "+", 1);
 
-    append(function_pointers_list, wrap_function(sub), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(sub), sizeof(MalType));
     append(symbol_list, "-", 1);
 
-    append(function_pointers_list, wrap_function(mult), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(mult), sizeof(MalType));
     append(symbol_list, "*", 1);
 
-    append(function_pointers_list, wrap_function(divide), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(divide), sizeof(MalType));
     append(symbol_list, "/", 1);
 
-    append(function_pointers_list, wrap_function(prn), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(prn), sizeof(MalType));
     append(symbol_list, "prn", 3);
 
-    append(function_pointers_list, wrap_function(list), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(list), sizeof(MalType));
     append(symbol_list, "list", 4);
 
-    append(function_pointers_list, wrap_function(list_question_mark),
+    append(function_pointers_list, NewMalCoreFunction(list_question_mark),
            sizeof(MalType));
     append(symbol_list, "list?", 5);
 
-    append(function_pointers_list, wrap_function(empty_question_mark),
+    append(function_pointers_list, NewMalCoreFunction(empty_question_mark),
            sizeof(MalType));
     append(symbol_list, "empty?", 6);
 
-    append(function_pointers_list, wrap_function(count), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(count), sizeof(MalType));
     append(symbol_list, "count", 5);
 
-    append(function_pointers_list, wrap_function(equal), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(equal), sizeof(MalType));
     append(symbol_list, "=", 1);
 
-    append(function_pointers_list, wrap_function(less), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(less), sizeof(MalType));
     append(symbol_list, "<", 1);
 
-    append(function_pointers_list, wrap_function(more), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(more), sizeof(MalType));
     append(symbol_list, ">", 1);
 
-    append(function_pointers_list, wrap_function(equal_less), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(equal_less),
+           sizeof(MalType));
     append(symbol_list, "<=", 2);
 
-    append(function_pointers_list, wrap_function(equal_more), sizeof(MalType));
+    append(function_pointers_list, NewMalCoreFunction(equal_more),
+           sizeof(MalType));
     append(symbol_list, ">=", 2);
 
     while (symbol_list != NULL && function_pointers_list != NULL) {

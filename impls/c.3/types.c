@@ -25,8 +25,7 @@ MalType *NewMalListCopy(MalList *list) {
 MalType *NewMalVector(MalList *list) {
     MalType *result         = GC_MALLOC(sizeof(MalType));
     result->type            = MAL_VECTOR;
-    result->value.ListValue = GC_MALLOC(sizeof(MalList));
-    memcpy(result->value.ListValue, list, sizeof(MalList));
+    result->value.ListValue = list;
     return result;
 }
 MalType *NewMalString(const char *string) {

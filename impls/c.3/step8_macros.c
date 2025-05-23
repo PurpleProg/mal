@@ -419,8 +419,6 @@ MalType *EVAL_LIST_CORE_FN(MalType **ASTp, env_t **envp, node_t *element,
 
     // define a list of evaluated element
     node_t *evaluated_list = GC_MALLOC(sizeof(node_t));
-    evaluated_list->data   = NULL;
-    evaluated_list->next   = NULL;
 
     // evaluate each element in the current list and add them
     while (element != NULL) {
@@ -448,8 +446,6 @@ MalType *EVAL_LIST_DEFAULT(env_t **envp, node_t *element, int vector) {
     // list have nothing special, eval everything and return.
     // define a list of evaluated element
     node_t *evaluated_list = GC_MALLOC(sizeof(node_t));
-    evaluated_list->data   = NULL;
-    evaluated_list->next   = NULL;
 
     // evaluate each element in the current list and add them
     while (element != NULL) {
@@ -460,15 +456,10 @@ MalType *EVAL_LIST_DEFAULT(env_t **envp, node_t *element, int vector) {
         element = element->next;
     };
 
-    // wrap evaluated list in a MalType
-    MalType *wrapper = GC_MALLOC(sizeof(MalType));
     if (vector == 1) {
-        wrapper->type = MAL_VECTOR;
-    } else {
-        wrapper->type = MAL_LIST;
+        return NewMalVector(evaluated_list);
     }
-    wrapper->value.ListValue = evaluated_list;
-    return wrapper;
+    return NewMalList(evaluated_list);
 }
 MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
     // trick that allow modifing the AST and env of EVAL from here

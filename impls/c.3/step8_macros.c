@@ -320,22 +320,9 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
             binds       = binds->next;
             binds->data = binds->next->data;
 
-            // if there is no exprs, still wrap a empty list (node_t *) in a
-            // MalType->type == MAL_LIST
-            MalType *wrap         = GC_MALLOC(sizeof(MalType));
-            wrap->type            = MAL_LIST;
-            wrap->value.ListValue = GC_MALLOC(sizeof(node_t));
-            // create a empty list
-            node_t *list = GC_MALLOC(sizeof(node_t));
-            list->data   = NULL;
-            list->next   = NULL;
-
-            // put empty list in the wrapper
-            memcpy(wrap->value.ListValue, list, sizeof(node_t));
-
-            // put the wrapper in the exprs list
+            // if there is no exprs, still put an empty MalList
             exprs->next       = GC_MALLOC(sizeof(node_t));
-            exprs->next->data = wrap;
+            exprs->next->data = NewMalListCopy(GC_MALLOC(sizeof(node_t)));
             break;
         }
 
@@ -362,20 +349,12 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         append(binds_without_and_symbol, node->data, sizeof(MalType));
         node = node->next;
     }
-    // wrap binds_without_and_symbol in a MalType
-    // why is it so hard naming things ?
-    MalType *binds_without_and_symbol_wrapped_in_a_maltype =
-        GC_MALLOC(sizeof(MalType));
-    binds_without_and_symbol_wrapped_in_a_maltype->type = MAL_LIST;
-    binds_without_and_symbol_wrapped_in_a_maltype->value.ListValue =
-        binds_without_and_symbol;
 
     // skip TCO for macro,
     // alow EVAL twice afterward
     if (do_eval_macro) {
-        env_t *new_env =
-            create_env(f->env, binds_without_and_symbol_wrapped_in_a_maltype,
-                       unevaluated_args);
+        env_t *new_env = create_env(
+            f->env, NewMalList(binds_without_and_symbol), unevaluated_args);
 
         if (new_env == NULL) {
             printf("macro new_env is NULL\n");
@@ -415,7 +394,7 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
     }
     // TCO
     *ASTp = f->ast;
-    *envp = create_env(f->env, binds_without_and_symbol_wrapped_in_a_maltype,
+    *envp = create_env(f->env, NewMalList(binds_without_and_symbol),
                        evaluated_args);
     // printf("eval fn env: %s\n", pr_env(*envp));
 

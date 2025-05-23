@@ -843,20 +843,13 @@ MalType *equal_more(node_t *node) {
 MalType *atom(node_t *node) {
     if (node->data == NULL) {
         printf("atom must take an arg \n");
-        return node->data;
+        return NewMalNIL();
     }
-    MalType *ret         = GC_MALLOC(sizeof(MalType));
-    ret->type            = MAL_ATOM;
-    ret->value.AtomValue = node->data;
-    return ret;
+    return NewMalAtom(node->data);
 }
 MalType *atom_question_mark(node_t *node) {
-    MalType *false          = GC_MALLOC(sizeof(MalType));
-    false->type             = MAL_FALSE;
-    false->value.FalseValue = NULL;
-    MalType *true           = GC_MALLOC(sizeof(MalType));
-    true->type              = MAL_TRUE;
-    true->value.TrueValue   = NULL;
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
 
     if (node->data == NULL) {
         return false;
@@ -877,6 +870,8 @@ MalType *deref(node_t *node) {
     return atom->value.AtomValue;
 }
 MalType *reset(node_t *node) {
+    MalType *nil = NewMalNIL();
+
     MalType *atom = node->data;
     if (atom->type != MAL_ATOM) {
         printf("reset arg1 is not an atom\n");
@@ -884,12 +879,14 @@ MalType *reset(node_t *node) {
     }
     if (node->next == NULL) {
         printf("reset take two arg\n");
-        return NULL;
+        return nil;
     }
     memcpy(atom->value.AtomValue, node->next->data, sizeof(MalType));
     return atom->value.AtomValue;
 }
 MalType *swap(node_t *node) {
+    MalType *nil = NewMalNIL();
+
     MalType *atom = node->data;
     if (atom->type != MAL_ATOM) {
         printf("swap arg1 is not an atom\n");
@@ -897,31 +894,25 @@ MalType *swap(node_t *node) {
     }
     if (node->next == NULL) {
         printf("swap take two arg\n");
-        return NULL;
+        return nil;
     }
     MalType *fn = node->next->data;
 
     // wrap the fn, atom and args into a list to call EVAL
-    // EVAL is not included
-    // manual fn apply ?
-    // create a EVAL.h that expose EVAL from step6.c ?
-    // even now how can i get the env ?
-    // from the function maybe...
-    MalType *wraper         = GC_MALLOC(sizeof(MalType));
-    wraper->type            = MAL_LIST;
-    wraper->value.ListValue = GC_MALLOC(sizeof(node_t));
+    node_t *list = GC_MALLOC(sizeof(node_t));
 
     // list (fn, atom->value, arg1, arg2, ...)
-    append(wraper->value.ListValue, fn, sizeof(MalType));
-    append(wraper->value.ListValue, atom->value.AtomValue, sizeof(MalType));
+    append(list, fn, sizeof(MalType));
+    append(list, atom->value.AtomValue, sizeof(MalType));
+
     // add args if any
     node_t *arg = node->next->next;
     while (arg != NULL) {
-        append(wraper->value.ListValue, arg->data, sizeof(MalType));
+        append(list, arg->data, sizeof(MalType));
         arg = arg->next;
     }
 
-    MalType *ret = EVAL(wraper, fn->value.FnWraperValue->env);
+    MalType *ret = EVAL(NewMalList(list), fn->value.FnWraperValue->env);
 
     // reset
     memcpy(atom->value.AtomValue, ret, sizeof(MalType));

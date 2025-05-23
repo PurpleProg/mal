@@ -55,3 +55,9 @@ MalType *NewMalNIL() {
     result->value.NilValue = NULL;
     return result;
 }
+MalType *NewMalAtom(MalType *MalObject) {
+    MalType *result         = GC_MALLOC(sizeof(MalType));
+    result->type            = MAL_ATOM;
+    result->value.AtomValue = MalObject;
+    return result;
+}

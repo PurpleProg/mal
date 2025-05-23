@@ -91,5 +91,6 @@ MalType *NewMalString(const char *string);
 MalType *NewMalTrue();
 MalType *NewMalFalse();
 MalType *NewMalNIL();
+MalType *NewMalAtom(MalType *MalObject);
 
 #endif

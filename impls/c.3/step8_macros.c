@@ -511,9 +511,9 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
             }
 
             // create the new_env
+            map_t *map     = GC_MALLOC(sizeof(map_t));
             env_t *new_env = GC_MALLOC(sizeof(env_t));
             new_env->outer = env;
-            map_t *map     = GC_MALLOC(sizeof(map_t));
             new_env->data  = map;
 
             // define the binding list
@@ -548,10 +548,6 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
             *envp = new_env;
             *ASTp = element->next->next->data;
             return NULL;
-
-            // without TCO :
-            // MalType * third_arg = EVAL(element->next->next->data,
-            // new_env); return third_arg;
         }
         // do
         if (strcmp(symbol, "do") == 0) {
@@ -564,68 +560,51 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
             element = element->next;
 
             // evaluate each element
-            // MalType * evaluated_element;
             while (element->next != NULL) {
-                // evaluated_element = EVAL(element->data, env);
                 EVAL(element->data, env);
                 element = element->next;
             };
 
             *ASTp = element->data;
             return NULL;
-
-            // return evaluated_element;
         }
         // if
         if (strcmp(symbol, "if") == 0) {
             if (element->next == NULL) {
                 printf("if shall take at least one arg");
-                MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                nil_ret->type    = MAL_NIL;
-                return nil_ret;
+                return NewMalNIL();
             }
             MalType *condition = EVAL(element->next->data, env);
             if (condition->type == MAL_FALSE || condition->type == MAL_NIL) {
                 // condition is false
                 if (element->next->next->next == NULL) {
-                    MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                    nil_ret->type    = MAL_NIL;
-                    return nil_ret;
+                    return NewMalNIL();
                 }
                 *ASTp = element->next->next->next->data;
                 return NULL;
-            } else {
-                // condition was true
-                if (element->next->next == NULL) {
-                    printf("if without body\n");
-                    MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                    nil_ret->type    = MAL_NIL;
-                    return nil_ret;
-                }
-                *ASTp = element->next->next->data;
-                return NULL;
             }
+            // condition was true
+            if (element->next->next == NULL) {
+                printf("if without body\n");
+                return NewMalNIL();
+            }
+            *ASTp = element->next->next->data;
+            return NULL;
         }
         // fn*
         if (strcmp(symbol, "fn*") == 0) {
             if (element->next == NULL) {
                 printf("fn shall take at least one arg");
-                MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                nil_ret->type    = MAL_NIL;
-                return nil_ret;
+                return NewMalNIL();
             }
             if (((MalType *)element->next->data)->type != MAL_LIST &&
                 ((MalType *)element->next->data)->type != MAL_VECTOR) {
                 printf("fn parameters should be a list or a vector\n");
-                MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                nil_ret->type    = MAL_NIL;
-                return nil_ret;
+                return NewMalNIL();
             }
             if (element->next == NULL) {
                 printf("fn dont have a body rn :/ \n");
-                MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                nil_ret->type    = MAL_NIL;
-                return nil_ret;
+                return NewMalNIL();
             }
 
             // create the function
@@ -662,9 +641,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
         // quote
         if (strcmp(symbol, "quote") == 0) {
             if (element->next == NULL) {
-                MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                nil_ret->type    = MAL_NIL;
-                return nil_ret;
+                return NewMalNIL();
             }
 
             // skip symbol
@@ -673,9 +650,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
         // quasiquote
         if (strcmp(symbol, "quasiquote") == 0) {
             if (element->next == NULL) {
-                MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-                nil_ret->type    = MAL_NIL;
-                return nil_ret;
+                return NewMalNIL();
             }
             *ASTp = quasiquote(element->next->data);
             return NULL;

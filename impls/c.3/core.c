@@ -2,6 +2,7 @@
 #include "EVAL.h"
 #include "env.h"
 #include "gc.h"
+#include "hashmap.h"
 #include "linked_list.h"
 #include "printer.h"
 #include "reader.h"
@@ -249,93 +250,67 @@ MalType *list(node_t *node) {
         node             = new_list;
     }
 
-    MalType *ret         = GC_MALLOC(sizeof(MalType));
-    ret->type            = MAL_LIST;
-    ret->value.ListValue = node;
-    return ret;
+    return NewMalList(node);
 }
 MalType *list_question_mark(node_t *node) {
-    MalType *bool = GC_MALLOC(sizeof(MalType));
     if (node->data == NULL) {
-        bool->type             = MAL_FALSE;
-        bool->value.FalseValue = NULL;
-        return bool;
+        return NewMalFalse();
     }
     if (((MalType *)node->data)->type == MAL_LIST) {
-        bool->type            = MAL_TRUE;
-        bool->value.TrueValue = NULL;
-    } else {
-        bool->type             = MAL_FALSE;
-        bool->value.FalseValue = NULL;
+        return NewMalTrue();
     }
-    return bool;
+    return NewMalFalse();
 }
 MalType *empty_question_mark(node_t *node) {
     MalType *bool = GC_MALLOC(sizeof(MalType));
     if (node->data == NULL) {
-        bool->type             = MAL_FALSE;
-        bool->value.FalseValue = NULL;
-        return bool;
+        return NewMalFalse();
     }
     if (!(((MalType *)node->data)->type == MAL_LIST ||
           ((MalType *)node->data)->type == MAL_VECTOR)) {
         printf("arg is not a list\n");
-        bool->type             = MAL_FALSE;
-        bool->value.FalseValue = NULL;
-        return bool;
+        return NewMalFalse();
     }
     MalList *list = ((MalType *)node->data)->value.ListValue;
     if (list->data == NULL) {
-        bool->type            = MAL_TRUE;
-        bool->value.TrueValue = NULL;
-    } else {
-        bool->type             = MAL_FALSE;
-        bool->value.FalseValue = NULL;
+        return NewMalTrue();
     }
-    return bool;
+    return NewMalFalse();
 }
 MalType *count(node_t *node) {
-    MalType *ret           = GC_MALLOC(sizeof(MalType));
-    ret->type              = MAL_INT;
-    ret->value.IntValue    = GC_MALLOC(sizeof(MalInt));
-    *(ret->value.IntValue) = 0;
+    MalInt counter = 0;
 
     printf("count: %s\n", pr_str(node->data, 0));
 
     node_t *new_node = GC_MALLOC(sizeof(node_t));
     if (node->data == NULL) {
         // arg is empty
-        *(ret->value.IntValue) = -1;
-        return ret;
+        counter = -1;
+        return NewMalInt(counter);
     }
     if (!(((MalType *)node->data)->type == MAL_LIST ||
           ((MalType *)node->data)->type == MAL_VECTOR)) {
-        *(ret->value.IntValue) = 0;
-        return ret;
+        counter = 0;
+        return NewMalInt(counter);
     }
 
     new_node = ((MalType *)node->data)->value.ListValue;
 
     if (new_node->data == NULL) {
         // list is empty
-        *(ret->value.IntValue) = 0;
-        return ret;
+        counter = 0;
+        return NewMalInt(counter);
     }
 
-    MalInt counter = 0;
     while (new_node != NULL) {
         counter += 1;
         new_node = new_node->next;
     }
-    *(ret->value.IntValue) = counter;
-    return ret;
+    return NewMalInt(counter);
 }
 MalType *cons(node_t *node) {
-    MalType *ret         = GC_MALLOC(sizeof(MalType));
-    ret->type            = MAL_LIST;
-    node_t *new_list     = GC_MALLOC(sizeof(node_t));
-    ret->value.ListValue = new_list;
-
+    node_t  *new_list = GC_MALLOC(sizeof(node_t));
+    MalType *ret      = NewMalList(new_list);
     if (node == NULL) {
         printf("cons need args");
         return ret;
@@ -367,10 +342,8 @@ MalType *cons(node_t *node) {
     return ret;
 }
 MalType *concat(node_t *node) {
-    MalType *ret         = GC_MALLOC(sizeof(MalType));
-    ret->type            = MAL_LIST;
-    node_t *new_list     = GC_MALLOC(sizeof(node_t));
-    ret->value.ListValue = new_list;
+    node_t  *new_list = GC_MALLOC(sizeof(node_t));
+    MalType *ret      = NewMalList(new_list);
 
     if (node == NULL) {
         printf("concat need args\n");
@@ -417,15 +390,11 @@ MalType *vec(node_t *node) {
         nil->type    = MAL_NIL;
         return nil;
     }
-    MalType *ret         = GC_MALLOC(sizeof(MalType));
-    ret->type            = MAL_VECTOR;
-    ret->value.ListValue = arg->value.ListValue;
 
-    return ret;
+    return NewMalList(arg->value.ListValue);
 }
 MalType *nth(node_t *node) {
-    MalType *nil = GC_MALLOC(sizeof(MalType));
-    nil->type    = MAL_NIL;
+    MalType *nil = NewMalNIL();
 
     if (node == NULL) {
         printf("nth need args");
@@ -481,24 +450,13 @@ MalType *first(node_t *node) {
     // build a list : (arg, 0)
     node_t *list = GC_MALLOC(sizeof(node_t));
 
-    // wrap 0 in MalType;
-    MalType *zero        = GC_MALLOC(sizeof(MalType));
-    long     tmp         = 0;
-    zero->type           = MAL_INT;
-    zero->value.IntValue = &tmp;
-
     append(list, node->data, sizeof(MalType));
-    append(list, zero, sizeof(MalType));
+    append(list, NewMalInt(0), sizeof(MalType));
 
     return nth(list);
 }
 MalType *rest(node_t *node) {
-    MalType *nil = GC_MALLOC(sizeof(MalType));
-    nil->type    = MAL_NIL;
-
-    MalType *empty_list         = GC_MALLOC(sizeof(MalType));
-    empty_list->type            = MAL_LIST;
-    empty_list->value.ListValue = GC_MALLOC(sizeof(node_t));
+    MalType *nil = NewMalNIL();
 
     MalType *arg = node->data;
     if (arg == NULL) {
@@ -507,7 +465,8 @@ MalType *rest(node_t *node) {
     }
     if (arg->type != MAL_LIST && arg->type != MAL_VECTOR) {
         printf("rest arg must be a list or a vecotr\n");
-        return empty_list;
+        // empty list
+        return NewMalList(GC_MALLOC(sizeof(node_t)));
     }
 
     node_t *list = arg->value.ListValue;
@@ -520,11 +479,8 @@ MalType *rest(node_t *node) {
         append(new_list, list->data, sizeof(MalType));
         list = list->next;
     }
-    // wrap new list in MalType
-    MalType *ret         = GC_MALLOC(sizeof(MalType));
-    ret->type            = MAL_LIST;
-    ret->value.ListValue = new_list;
-    return ret;
+
+    return NewMalList(new_list);
 }
 
 MalType *equal(node_t *node) {

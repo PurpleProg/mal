@@ -20,7 +20,7 @@ MalType *NewMalList(MalList *list) {
     MalType *result         = GC_MALLOC(sizeof(MalType));
     result->type            = MAL_LIST;
     result->value.ListValue = GC_MALLOC(sizeof(MalList));
-    memcpy(result->value.ListValue, list, sizeof(MalList));
+    result->value.ListValue = list;
     return result;
 }
 MalType *NewMalVector(MalList *list) {

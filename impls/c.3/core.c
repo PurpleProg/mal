@@ -486,22 +486,23 @@ MalType *rest(node_t *node) {
 MalType *equal(node_t *node) {
     MalType *false = NewMalFalse();
     MalType *true  = NewMalTrue();
+    MalType *nil   = NewMalNIL();
 
     if (node == NULL) {
         printf("= with no arg \n");
-        return false;
+        return nil;
     }
     if (node->data == NULL) {
         printf("= arg1 is NULL \n");
-        return false;
+        return nil;
     }
     if (node->next == NULL) {
         printf("= with only one arg\n");
-        return false;
+        return nil;
     }
     if (node->next->data == NULL) {
         printf("= arg2 is NULL \n");
-        return false;
+        return nil;
     }
 
     MalType *arg1 = GC_MALLOC(sizeof(MalType));

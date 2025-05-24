@@ -278,8 +278,6 @@ MalType *empty_question_mark(node_t *node) {
 MalType *count(node_t *node) {
     MalInt counter = 0;
 
-    printf("count: %s\n", pr_str(node->data, 0));
-
     node_t *new_node = GC_MALLOC(sizeof(node_t));
     if (node->data == NULL) {
         // arg is empty

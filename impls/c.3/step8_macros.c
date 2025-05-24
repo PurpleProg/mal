@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 }
 
 MalType *quasiquote(MalType *AST) {
-    if (AST->type == MAL_LIST || AST->type == MAL_VECTOR) {
-        node_t *list = AST->value.ListValue;
+    if (IsListOrVector(AST)) {
+        MalList *list = GetList(AST);
 
         if (is_empty(list)) {
             printf("quasiquote empty list, returning AST\n");
@@ -95,8 +95,8 @@ MalType *quasiquote(MalType *AST) {
         MalType *first_element = list->data;
 
         // if AST is a list starting with the unquote symbol
-        if (first_element->type == MAL_SYMBOL) {
-            if (strcmp(first_element->value.SymbolValue, "unquote") == 0) {
+        if (IsSymbol(first_element)) {
+            if (strcmp(GetSymbol(first_element), "unquote") == 0) {
                 if (list->next == NULL) {
                     printf("unquoting nothing :/\n");
                     // TODO: return nil maybe
@@ -127,14 +127,14 @@ MalType *quasiquote(MalType *AST) {
             }
 
             // if elt is a list starting with "split-unquote"
-            if (elt->type == MAL_LIST || elt->type == MAL_VECTOR) {
-                node_t *list = elt->value.ListValue;
+            if (IsListOrVector(elt)) {
+                MalList *list = GetList(elt);
                 if (is_empty(list)) {
                     return AST;
                 }
                 MalType *elt_first_element = list->data;
-                if (elt_first_element->type == MAL_SYMBOL) {
-                    if (strcmp(elt_first_element->value.SymbolValue,
+                if (IsSymbol(elt_first_element)) {
+                    if (strcmp(GetSymbol(elt_first_element),
                                "splice-unquote") == 0) {
                         // replace the current result with a list containing:
                         // the "concat" symbol,
@@ -193,7 +193,7 @@ MalType *quasiquote(MalType *AST) {
 
         return NewMalList(list_result);
 
-    } else if (AST->type == MAL_SYMBOL || AST->type == MAL_HASHMAP) {
+    } else if (IsSymbol(AST) || IsHashmap(AST)) {
         // If ast is a map or a symbol,
         // return a list containing:
         // the "quote" symbol,
@@ -220,7 +220,7 @@ MalType *READ(char *line) {
 MalType *EVAL_SYMBOL(MalType *AST, env_t *env) {
     // NOTE: get symbol from env
     // and eval (true, false, nil)
-    char *symbol = AST->value.SymbolValue;
+    char *symbol = GetSymbol(AST);
 
     // true
     if (strcmp(symbol, "true") == 0) {
@@ -248,7 +248,7 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
     MalType *AST = *ASTp;
     env_t   *env = *envp;
 
-    MalFnWraper *f = evaluated_first_element->value.FnWraperValue;
+    MalFnWraper *f = GetFnWrapper(evaluated_first_element);
 
     // skip evaluated first element;
     node_t *unevaluated_args = element->next;
@@ -261,13 +261,11 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
             MalType *arg = unevaluated_args->data;
             append(evaluated_args, EVAL(arg, env), sizeof(MalType));
             unevaluated_args = unevaluated_args->next;
-
-            // printf("eval args : %s \n", pr_str(arg, 0));
         }
     }
 
     // check for Clojure-style variadic function parameters
-    node_t *binds = f->param->value.ListValue;
+    node_t *binds = GetList(f->param);
     node_t *exprs;
     if (do_eval_macro) {
         exprs = unevaluated_args;
@@ -282,11 +280,8 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         if (binds->data == NULL) {
             break;
         }
-        char *bind = ((MalType *)binds->data)->value.SymbolValue;
+        char *bind = GetSymbol(binds->data);
         if (strcmp(bind, "&") == 0) {
-
-            printf("& found\n");
-
             // skip the & in the binds list
             // construct a new binds list without the & for eval
             // but dont mutate the fuctions binds
@@ -302,7 +297,7 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         // catch exprs empty
         if (exprs->next == NULL && binds->next != NULL) {
             printf("expr is NULL\n");
-            char *bind = ((MalType *)binds->next->data)->value.SymbolValue;
+            char *bind = GetSymbol(binds->next->data);
             if (strcmp(bind, "&") != 0) {
                 printf("not enough args passed to the function\n");
                 return AST;
@@ -323,14 +318,14 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
 
     // make a copy of binds without the & for evaluation
     node_t *binds_without_and_symbol = GC_MALLOC(sizeof(node_t));
-    node_t *node                     = f->param->value.ListValue;
+    node_t *node                     = GetList(f->param);
     while (node != NULL) {
         // skip &
         if (node->data == NULL) {
             // f with no binds
             break;
         }
-        char *bind = ((MalType *)node->data)->value.SymbolValue;
+        char *bind = GetSymbol(node->data);
         if (strcmp(bind, "&") == 0) {
             node = node->next;
             append(binds_without_and_symbol, node->data, sizeof(MalType));
@@ -350,11 +345,6 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         if (new_env == NULL) {
             printf("macro new_env is NULL\n");
         }
-        // printf("f->param: %s\n", pr_str(f->param, 0));
-        // printf("f->ast: %s\n", pr_str(f->ast, 0));
-        // printf("binds no &: %s\n",
-        //        pr_str(binds_without_and_symbol_wrapped_in_a_maltype, 0));
-        // printf("eval macro env: %s\n", pr_env(new_env));
 
         // create a copy of ast
         // to avoid mutating the macro while evaluating it's body
@@ -363,18 +353,16 @@ MalType *EVAL_LIST_FN_WRAPPER(MalType **ASTp, env_t **envp, node_t *element,
         node_t  *list           = GC_MALLOC(sizeof(node_t));
         MalType *func_body_copy = GC_MALLOC(sizeof(MalType));
 
-        // f->ast must be a MalList right ?
-        // surely that wont cause a segfault
-        if (f->ast->type == MAL_LIST) {
+        // NOTE: can f->ast be a vector ? not shure
+        if (IsListOrVector(f->ast)) {
             func_body_copy->type = MAL_LIST;
-            node_t *node         = f->ast->value.ListValue;
+            node_t *node         = GetList(f->ast);
             while (!is_empty(node)) {
                 append(list, node->data, sizeof(MalType));
                 node = node->next;
             }
+            // NOTE: setters ? pfffff
             func_body_copy->value.ListValue = list;
-
-            printf("func body copy: %s\n", pr_str(func_body_copy, 0));
 
             return EVAL(func_body_copy, new_env);
         } else {
@@ -397,14 +385,13 @@ MalType *EVAL_LIST_CORE_FN(MalType **ASTp, env_t **envp, node_t *element,
     env_t   *env = *envp;
 
     MalType *core_fn = evaluated_first_element;
-    if (core_fn->value.CoreFnValue == NULL) {
-        fprintf(stderr, "core_fn is null\n");
-        return AST;
-    }
 
     // skip symbol
     // this can make element NULL
     element = element->next;
+    if (element == NULL) {
+        printf("element is NULL\n");
+    }
 
     // add the rest of the list to a list of evaluated things
 
@@ -414,21 +401,13 @@ MalType *EVAL_LIST_CORE_FN(MalType **ASTp, env_t **envp, node_t *element,
     // evaluate each element in the current list and add them
     while (element != NULL) {
         MalType *evaluated_element = EVAL(element->data, env);
-        // if (evaluated_element->type == MAL_LIST) {
-        //	// fix VECTORS
-        //	evaluated_element->type = ((MalType *)element->data)->type;
-        // }
 
-        if (evaluated_element == NULL) {
-            // just skip it
-            continue;
-        }
         append(evaluated_list, (void *)evaluated_element, sizeof(MalType));
 
         element = element->next;
     };
 
-    MalType *result = (*(MalCoreFn)core_fn->value.CoreFnValue)(evaluated_list);
+    MalType *result = GetCoreFn(core_fn)(evaluated_list);
     return result;
 }
 MalType *EVAL_LIST_DEFAULT(env_t **envp, node_t *element, int vector) {
@@ -457,7 +436,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
     MalType *AST = *ASTp;
     env_t   *env = *envp;
 
-    node_t *element = AST->value.ListValue;
+    node_t *element = GetList(AST);
     // if the list is empty
     if (element->data == NULL) {
         return AST;
@@ -470,8 +449,8 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
     }
 
     // special forms
-    if (first_element->type == MAL_SYMBOL) {
-        char *symbol = first_element->value.SymbolValue;
+    if (IsSymbol(first_element)) {
+        char *symbol = GetSymbol(first_element);
         // def!
         if (strcmp(symbol, "def!") == 0) {
             if (element->next == NULL) {
@@ -482,9 +461,8 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 printf("def! shall take two args");
                 return AST;
             }
-            MalSymbol *key =
-                ((MalType *)(element->next->data))->value.SymbolValue;
-            MalType *value = EVAL(element->next->next->data, env);
+            MalSymbol *key   = GetSymbol(element->next->data);
+            MalType   *value = EVAL(element->next->next->data, env);
             if (value != NULL) {
                 set(env, key, value);
             }
@@ -509,10 +487,8 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
 
             // define the binding list
             MalList *bindings_list = NULL;
-            if (((MalType *)(element->next->data))->type == MAL_LIST ||
-                ((MalType *)(element->next->data))->type == MAL_VECTOR) {
-                bindings_list =
-                    ((MalType *)(element->next->data))->value.ListValue;
+            if (IsListOrVector(element->next->data)) {
+                bindings_list = GetList(element->next->data);
             } else {
                 printf("let* takes a list or a vector as arg :/\n");
                 return AST;
@@ -526,8 +502,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                     return AST;
                 }
 
-                MalSymbol *key =
-                    ((MalType *)(binding->data))->value.SymbolValue;
+                MalSymbol *key = GetSymbol(binding->data);
                 MalType *value = EVAL((MalType *)binding->next->data, new_env);
                 if (value != NULL) {
                     set(new_env, key, value);
@@ -566,7 +541,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 return NewMalNIL();
             }
             MalType *condition = EVAL(element->next->data, env);
-            if (condition->type == MAL_FALSE || condition->type == MAL_NIL) {
+            if (IsFalse(condition) || IsNil(condition)) {
                 // condition is false
                 if (element->next->next->next == NULL) {
                     return NewMalNIL();
@@ -588,8 +563,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 printf("fn shall take at least one arg");
                 return NewMalNIL();
             }
-            if (((MalType *)element->next->data)->type != MAL_LIST &&
-                ((MalType *)element->next->data)->type != MAL_VECTOR) {
+            if (!IsListOrVector(element->next->data)) {
                 printf("fn parameters should be a list or a vector\n");
                 return NewMalNIL();
             }
@@ -603,8 +577,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
             MalType *parameters = element->next->data;
             MalType *body       = element->next->next->data;
 
-            if (parameters->type != MAL_LIST &&
-                (parameters->type != MAL_VECTOR)) {
+            if (!IsListOrVector(parameters)) {
                 printf("args whould be a list or a vector\n");
                 return AST;
             }
@@ -656,17 +629,17 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
                 printf("defmacro! shall take two args");
                 return AST;
             }
-            MalSymbol *key =
-                ((MalType *)(element->next->data))->value.SymbolValue;
-            MalType *value = EVAL(element->next->next->data, env);
+            MalSymbol *key   = GetSymbol(element->next->data);
+            MalType   *value = EVAL(element->next->next->data, env);
             if (value == NULL) {
                 printf("defmacro! eval arg returned NULL\n");
                 return AST;
             }
-            if (value->type != MAL_FN_WRAPER) {
+            if (!IsFnWrapper(value)) {
                 printf("defmacro! arg must be a function\n");
                 return AST;
             }
+
             value->value.FnWraperValue->is_macro = 1;
 
             set(env, key, value);
@@ -683,7 +656,7 @@ MalType *EVAL_LIST(MalType **ASTp, env_t **envp, int vector) {
 
     switch (evaluated_first_element->type) {
     case MAL_FN_WRAPER: {
-        if (evaluated_first_element->value.FnWraperValue->is_macro) {
+        if (GetFnWrapper(evaluated_first_element)->is_macro) {
             // apply the function
             // to the (unevaluated) remaining elements of ast,
             // producing a new form

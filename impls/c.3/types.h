@@ -27,7 +27,9 @@ typedef enum {
 typedef signed long        MalInt;
 typedef char               MalSymbol;
 typedef char               MalString;
+typedef char               MalKeyword;
 typedef node_t             MalList;
+typedef node_t             MalVector;
 typedef int                MalTrue;
 typedef int                MalFalse;
 typedef int                MalNil;
@@ -52,6 +54,7 @@ typedef union MalTypeValue {
     MalString   *StringValue;
     MalType     *AtomValue;
     MalHashmap  *HashmapValue;
+    MalKeyword  *KeywordValue;
 } MalTypeValue;
 
 struct MalType {
@@ -94,5 +97,34 @@ MalType *NewMalFalse();
 MalType *NewMalNIL();
 MalType *NewMalAtom(MalType *MalObject);
 MalType *NewMalCoreFunction(MalCoreFn func);
+
+int IsListOrVector(MalType *AST);
+int IsSymbol(MalType *AST);
+int IsInt(MalType *AST);
+int IsList(MalType *AST);
+int IsVector(MalType *AST);
+int IsString(MalType *AST);
+int IsCoreFn(MalType *AST);
+int IsFn(MalType *AST);
+int IsFnWrapper(MalType *AST);
+int IsNil(MalType *AST);
+int IsTrue(MalType *AST);
+int IsFalse(MalType *AST);
+int IsKeyword(MalType *AST);
+int IsAtom(MalType *AST);
+int IsHashmap(MalType *AST);
+
+MalList     *GetList(MalType *AST);
+MalSymbol   *GetSymbol(MalType *AST);
+MalInt      *GetInt(MalType *AST);
+MalList     *GetList(MalType *AST);
+MalList     *GetVector(MalType *AST);
+MalString   *GetString(MalType *AST);
+MalCoreFn    GetCoreFn(MalType *AST);
+MalFn       *GetFn(MalType *AST);
+MalFnWraper *GetFnWrapper(MalType *AST);
+MalKeyword  *GetKeyword(MalType *AST);
+MalType     *GetAtom(MalType *AST);
+MalHashmap  *GetHashmap(MalType *AST);
 
 #endif

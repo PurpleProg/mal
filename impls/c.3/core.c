@@ -21,11 +21,11 @@ MalType *add(node_t *node) {
     MalInt result = 0;
     while (node != NULL) {
         MalType *integer = node->data;
-        if (integer->type != MAL_INT) {
+        if (!IsInt(integer)) {
             printf("add arg is not int\n");
             break;
         }
-        result += *integer->value.IntValue;
+        result += *GetInt(integer);
         node = node->next;
     };
 
@@ -44,8 +44,8 @@ MalType *sub(node_t *node) {
         return 0;
     }
 
-    MalInt a = *((MalType *)node->data)->value.IntValue;
-    MalInt b = *((MalType *)node->next->data)->value.IntValue;
+    MalInt a = *GetInt(node->data);
+    MalInt b = *GetInt(node->next->data);
     result   = a - b;
 
     return NewMalInt(result);
@@ -58,7 +58,7 @@ MalType *mult(node_t *node) {
 
     MalInt result = 1;
     do {
-        result *= *((MalType *)node->data)->value.IntValue;
+        result *= *GetInt(node->data);
         node = node->next;
     } while (node != NULL);
 
@@ -80,8 +80,8 @@ MalType *divide(node_t *node) {
         return 0;
     } // else if (node->next->next->next != NULL) {
 
-    MalInt a = *((MalType *)node->data)->value.IntValue;
-    MalInt b = *((MalType *)node->next->data)->value.IntValue;
+    MalInt a = *GetInt(node->data);
+    MalInt b = *GetInt(node->next->data);
 
     result = a / b;
 
@@ -194,11 +194,11 @@ MalType *println(node_t *node) {
     return NewMalNIL();
 }
 MalType *readstring(node_t *node) {
-    if (((MalType *)node->data)->type != MAL_STRING) {
+    if (!IsString(node->data)) {
         printf("read-string arg is not a string\n");
         return NULL;
     }
-    char *string = ((MalType *)node->data)->value.StringValue;
+    char *string = GetString(node->data);
 
     return read_str(string);
 }
@@ -206,11 +206,11 @@ MalType *slurp(node_t *node) {
     // chatGPT wrote this one
 
     // unpack the filename
-    if (((MalType *)node->data)->type != MAL_STRING) {
+    if (!IsString(node->data)) {
         printf("slurp arg should be a string\n");
         return NULL;
     }
-    char *filename = ((MalType *)node->data)->value.StringValue;
+    char *filename = GetString(node->data);
 
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -256,7 +256,7 @@ MalType *list_question_mark(node_t *node) {
     if (node->data == NULL) {
         return NewMalFalse();
     }
-    if (((MalType *)node->data)->type == MAL_LIST) {
+    if (IsList(node->data)) {
         return NewMalTrue();
     }
     return NewMalFalse();
@@ -265,12 +265,11 @@ MalType *empty_question_mark(node_t *node) {
     if (node->data == NULL) {
         return NewMalFalse();
     }
-    if (!(((MalType *)node->data)->type == MAL_LIST ||
-          ((MalType *)node->data)->type == MAL_VECTOR)) {
+    if (!(IsListOrVector(node->data))) {
         printf("arg is not a list\n");
         return NewMalFalse();
     }
-    MalList *list = ((MalType *)node->data)->value.ListValue;
+    MalList *list = GetList(node->data);
     if (list->data == NULL) {
         return NewMalTrue();
     }
@@ -287,13 +286,12 @@ MalType *count(node_t *node) {
         counter = -1;
         return NewMalInt(counter);
     }
-    if (!(((MalType *)node->data)->type == MAL_LIST ||
-          ((MalType *)node->data)->type == MAL_VECTOR)) {
+    if (!IsListOrVector(node->data)) {
         counter = 0;
         return NewMalInt(counter);
     }
 
-    new_node = ((MalType *)node->data)->value.ListValue;
+    new_node = GetList(node->data);
 
     if (new_node->data == NULL) {
         // list is empty
@@ -332,7 +330,7 @@ MalType *cons(node_t *node) {
     MalType *old_list = node->next->data;
 
     // append the rest of the list
-    node_t *old_list_node = old_list->value.ListValue;
+    node_t *old_list_node = GetList(old_list);
     while (old_list_node != NULL && old_list_node->data != NULL) {
         append(new_list, old_list_node->data, sizeof(MalType));
         old_list_node = old_list_node->next;
@@ -356,8 +354,8 @@ MalType *concat(node_t *node) {
     // node is a list of lists, a list of args to concat
     while (node != NULL && node->data != NULL) {
         MalType *list      = node->data;
-        node_t  *list_node = list->value.ListValue;
-        if (list->type != MAL_LIST && list->type != MAL_VECTOR) {
+        MalList *list_node = GetList(list);
+        if (!IsListOrVector(list)) {
             printf("concat arg in not list nor vector\n");
             // skipping...
             node = node->next;
@@ -383,14 +381,12 @@ MalType *vec(node_t *node) {
     }
 
     MalType *arg = node->data;
-    if (arg->type != MAL_LIST && arg->type != MAL_VECTOR) {
+    if (!IsListOrVector(arg)) {
         printf("vec take a list of vector as arg\n");
-        MalType *nil = GC_MALLOC(sizeof(MalType));
-        nil->type    = MAL_NIL;
-        return nil;
+        return NewMalNIL();
     }
 
-    return NewMalList(arg->value.ListValue);
+    return arg;
 }
 MalType *nth(node_t *node) {
     MalType *nil = NewMalNIL();
@@ -414,20 +410,20 @@ MalType *nth(node_t *node) {
 
     // arg 1 list
     MalType *arg1 = node->data;
-    if (arg1->type != MAL_LIST && arg1->type != MAL_VECTOR) {
+    if (!IsListOrVector(arg1)) {
         printf("nth arg1 must be a list or a vector\n");
         return nil;
     }
 
     // second arg index
     MalType *arg2 = node->next->data;
-    if (arg2->type != MAL_INT) {
+    if (!IsInt(arg2)) {
         printf("nth arg2 must be a int\n");
         return nil;
     }
 
-    node_t *list         = arg1->value.ListValue;
-    int     target_index = *(arg2->value.IntValue);
+    MalList *list         = GetList(arg1);
+    int      target_index = *GetInt(arg2);
     if (target_index < 0) {
         printf("index < 0\n");
         return nil;
@@ -455,24 +451,22 @@ MalType *first(node_t *node) {
     return nth(list);
 }
 MalType *rest(node_t *node) {
-    MalType *nil = NewMalNIL();
-
     MalType *arg = node->data;
     if (arg == NULL) {
         printf("rest takes an arg\n");
-        return nil;
+        return NewMalNIL();
     }
-    if (arg->type != MAL_LIST && arg->type != MAL_VECTOR) {
+    if (!IsListOrVector(arg)) {
         printf("rest arg must be a list or a vecotr\n");
         // empty list
         return NewMalList(GC_MALLOC(sizeof(node_t)));
     }
 
-    node_t *list = arg->value.ListValue;
+    MalList *list = GetList(arg);
     // skip first element
     list = list->next;
     // allocate a new list
-    node_t *new_list = GC_MALLOC(sizeof(node_t));
+    MalList *new_list = GC_MALLOC(sizeof(node_t));
     // copy list into new_list
     while (!is_empty(list)) {
         append(new_list, list->data, sizeof(MalType));
@@ -510,8 +504,7 @@ MalType *equal(node_t *node) {
     arg2          = node->next->data;
 
     if (arg1->type != arg2->type) {
-        if (!((arg1->type == MAL_LIST || arg1->type == MAL_VECTOR) &&
-              (arg2->type == MAL_LIST || arg2->type == MAL_VECTOR))) {
+        if (!(IsListOrVector(arg1) && IsListOrVector(arg2))) {
             return false;
         }
     }
@@ -523,8 +516,8 @@ MalType *equal(node_t *node) {
     case MAL_VECTOR:
         // fallback to list equality
     case MAL_LIST: {
-        node_t *node1 = arg1->value.ListValue;
-        node_t *node2 = arg2->value.ListValue;
+        node_t *node1 = GetList(arg1);
+        node_t *node2 = GetList(arg2);
         while (node1 != NULL && node2 != NULL) {
             // if two elements are empty:
             if (node1->data == NULL && node2->data == NULL) {
@@ -540,7 +533,7 @@ MalType *equal(node_t *node) {
             append(zipped, node1->data, sizeof(MalType));
             append(zipped, node2->data, sizeof(MalType));
 
-            if (equal(zipped)->type == MAL_FALSE) {
+            if (IsFalse(equal(zipped))) {
                 return false;
             }
             node1 = node1->next;
@@ -553,8 +546,8 @@ MalType *equal(node_t *node) {
         return true;
     }
     case MAL_INT: {
-        MalInt int1 = *arg1->value.IntValue;
-        MalInt int2 = *arg2->value.IntValue;
+        MalInt int1 = *GetInt(arg1);
+        MalInt int2 = *GetInt(arg2);
         if (int1 == int2) {
             return true;
         }
@@ -562,24 +555,24 @@ MalType *equal(node_t *node) {
         return false;
     }
     case MAL_STRING: {
-        char *string1 = arg1->value.StringValue;
-        char *string2 = arg2->value.StringValue;
+        char *string1 = GetString(arg1);
+        char *string2 = GetString(arg2);
         if (strcmp(string1, string2) == 0) {
             return true;
         }
         return false;
     }
     case MAL_KEYWORD: {
-        char *symbol1 = arg1->value.SymbolValue;
-        char *symbol2 = arg2->value.SymbolValue;
+        char *symbol1 = GetKeyword(arg1);
+        char *symbol2 = GetKeyword(arg2);
         if (strcmp(symbol1, symbol2) == 0) {
             return true;
         }
         return false;
     }
     case MAL_SYMBOL: {
-        char *symbol1 = arg1->value.SymbolValue;
-        char *symbol2 = arg2->value.SymbolValue;
+        char *symbol1 = GetSymbol(arg1);
+        char *symbol2 = GetSymbol(arg2);
         if (strcmp(symbol1, symbol2) == 0) {
             return true;
         }
@@ -587,8 +580,8 @@ MalType *equal(node_t *node) {
     }
     case MAL_FN_WRAPER: {
         // unpack and recursive call
-        MalFn *fn1 = arg1->value.FnWraperValue->fn;
-        MalFn *fn2 = arg2->value.FnWraperValue->fn;
+        MalFn *fn1 = GetFnWrapper(arg1)->fn;
+        MalFn *fn2 = GetFnWrapper(arg2)->fn;
 
         // wrap in a list
         node_t *list = GC_MALLOC(sizeof(node_t));
@@ -599,8 +592,8 @@ MalType *equal(node_t *node) {
     }
     case MAL_FN: {
         // two function with same body and same params
-        MalFn *fn1 = arg1->value.FnValue;
-        MalFn *fn2 = arg2->value.FnValue;
+        MalFn *fn1 = GetFn(arg1);
+        MalFn *fn2 = GetFn(arg2);
 
         // build a new body_list for recursive equal call
         node_t *body_list = GC_MALLOC(sizeof(node_t));
@@ -611,21 +604,19 @@ MalType *equal(node_t *node) {
         }
 
         // param is a MalType->list of MalType->Symbol
-        if (((MalType *)fn1->param)->type != MAL_LIST &&
-            ((MalType *)fn1->param)->type != MAL_VECTOR) {
+        if (!IsListOrVector(fn1->param)) {
             printf("equal : fn1->param is not a list\n");
         }
-        if (((MalType *)fn2->param)->type != MAL_LIST &&
-            ((MalType *)fn2->param)->type != MAL_VECTOR) {
+        if (!IsListOrVector(fn2->param)) {
             printf("equal : fn2->param is not a list\n");
         }
-        node_t *symbol_list_1 = ((MalType *)fn1->param)->value.ListValue;
-        node_t *symbol_list_2 = ((MalType *)fn2->param)->value.ListValue;
+        node_t *symbol_list_1 = GetList(fn1->param);
+        node_t *symbol_list_2 = GetList(fn2->param);
 
         while (symbol_list_1 != NULL && symbol_list_2 != NULL) {
             // should check that every symbol is indeed a MAL_SYMBOL
-            char *symbol1 = ((MalType *)symbol_list_1->data)->value.SymbolValue;
-            char *symbol2 = ((MalType *)symbol_list_2->data)->value.SymbolValue;
+            char *symbol1 = GetSymbol(symbol_list_1->data);
+            char *symbol2 = GetSymbol(symbol_list_2->data);
 
             if (strcmp(symbol1, symbol2) != 0) {
                 return false;
@@ -654,7 +645,7 @@ MalType *equal(node_t *node) {
     }
     case MAL_CORE_FN: {
         // check if pointers are the same
-        if (arg1->value.CoreFnValue == arg2->value.CoreFnValue) {
+        if (GetCoreFn(arg1) == GetCoreFn(arg2)) {
             return true;
         }
         return false;
@@ -680,8 +671,8 @@ MalType *macro_question_mark(node_t *node) {
     MalType *arg = node->data;
     printf("macro? ast: %s\n", pr_str(arg, 0));
 
-    if (arg->type == MAL_FN_WRAPER) {
-        if (arg->value.FnWraperValue->is_macro) {
+    if (IsFnWrapper(arg)) {
+        if (GetFnWrapper(arg)->is_macro) {
             return true;
         }
     }
@@ -717,11 +708,11 @@ MalType *less(node_t *node) {
     arg1          = node->data;
     arg2          = node->next->data;
 
-    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+    if (!IsInt(arg1) || !IsInt(arg2)) {
         printf("< with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue < *arg2->value.IntValue) {
+    if (*GetInt(arg1) < *GetInt(arg2)) {
         return true;
     }
     return false;
@@ -754,11 +745,11 @@ MalType *more(node_t *node) {
     arg1          = node->data;
     arg2          = node->next->data;
 
-    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+    if (!IsInt(arg1) || !IsInt(arg2)) {
         printf("> with non int parameters\n");
         return NULL;
     }
-    if (*arg1->value.IntValue > *arg2->value.IntValue) {
+    if (*GetInt(arg1) > *GetInt(arg2)) {
         return true;
     }
     return false;
@@ -791,11 +782,11 @@ MalType *equal_less(node_t *node) {
     arg1          = node->data;
     arg2          = node->next->data;
 
-    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+    if (!IsInt(arg1) || !IsInt(arg2)) {
         printf("<= with non int parameters\n");
         return nil;
     }
-    if (*arg1->value.IntValue <= *arg2->value.IntValue) {
+    if (*GetInt(arg1) <= *GetInt(arg2)) {
         return true;
     }
     return false;
@@ -828,11 +819,11 @@ MalType *equal_more(node_t *node) {
     arg1          = node->data;
     arg2          = node->next->data;
 
-    if (arg1->type != MAL_INT || arg2->type != MAL_INT) {
+    if (!IsInt(arg1) || !IsInt(arg2)) {
         printf(">= with non int parameters\n");
         return nil;
     }
-    if (*arg1->value.IntValue >= *arg2->value.IntValue) {
+    if (*GetInt(arg1) >= *GetInt(arg2)) {
         return true;
     }
     return false;
@@ -854,7 +845,7 @@ MalType *atom_question_mark(node_t *node) {
         return false;
     }
 
-    if (((MalType *)node->data)->type == MAL_ATOM) {
+    if (IsAtom(node->data)) {
         return true;
     } else {
         return false;
@@ -862,32 +853,30 @@ MalType *atom_question_mark(node_t *node) {
 }
 MalType *deref(node_t *node) {
     MalType *atom = node->data;
-    if (atom->type != MAL_ATOM) {
+    if (!IsAtom(atom)) {
         printf("deref arg is not an atom\n");
         return node->data;
     }
-    return atom->value.AtomValue;
+    return GetAtom(atom);
 }
 MalType *reset(node_t *node) {
-    MalType *nil = NewMalNIL();
-
     MalType *atom = node->data;
-    if (atom->type != MAL_ATOM) {
+    if (!IsAtom(atom)) {
         printf("reset arg1 is not an atom\n");
         return node->data;
     }
     if (node->next == NULL) {
         printf("reset take two arg\n");
-        return nil;
+        return NewMalNIL();
     }
-    memcpy(atom->value.AtomValue, node->next->data, sizeof(MalType));
-    return atom->value.AtomValue;
+    memcpy(GetAtom(atom), node->next->data, sizeof(MalType));
+    return GetAtom(atom);
 }
 MalType *swap(node_t *node) {
     MalType *nil = NewMalNIL();
 
     MalType *atom = node->data;
-    if (atom->type != MAL_ATOM) {
+    if (!IsAtom(atom)) {
         printf("swap arg1 is not an atom\n");
         return node->data;
     }
@@ -902,7 +891,7 @@ MalType *swap(node_t *node) {
 
     // list (fn, atom->value, arg1, arg2, ...)
     append(list, fn, sizeof(MalType));
-    append(list, atom->value.AtomValue, sizeof(MalType));
+    append(list, GetAtom(atom), sizeof(MalType));
 
     // add args if any
     node_t *arg = node->next->next;
@@ -911,12 +900,12 @@ MalType *swap(node_t *node) {
         arg = arg->next;
     }
 
-    MalType *ret = EVAL(NewMalList(list), fn->value.FnWraperValue->env);
+    MalType *ret = EVAL(NewMalList(list), GetFnWrapper(fn)->env);
 
     // reset
-    memcpy(atom->value.AtomValue, ret, sizeof(MalType));
+    memcpy(GetAtom(atom), ret, sizeof(MalType));
 
-    return atom->value.AtomValue;
+    return GetAtom(atom);
 }
 
 env_t *create_repl() {

@@ -55,15 +55,6 @@ int main(int argc, char *argv[]) {
         "  )"
         ")",
         repl_env);
-    // test diff macro vs function
-    rep("(defmacro! test (fn* (& lst) (list (count lst) (pr-str lst))))",
-        repl_env);
-    rep("(def! ftest (fn* (& lst) (list (count lst) (pr-str lst))))", repl_env);
-    // unless macro
-    rep("(defmacro! unless (fn* (condition, iftrue, iffalse)"
-        " (if (not condition) iftrue iffalse)"
-        "))",
-        repl_env);
 
     // add eval to the repl
     set(repl_env, "eval", NewMalCoreFunction(eval));
@@ -80,7 +71,7 @@ int main(int argc, char *argv[]) {
         // call load-file on the first arg
         char *string = GC_MALLOC(strlen(argv[1]) + strlen("(load-file \"\")"));
         sprintf(string, "(load-file \"%s\")", argv[1]);
-        printf("%s\n", rep(string, repl_env));
+        rep(string, repl_env);
         return 0;
     }
 

@@ -898,10 +898,16 @@ MalType *swap(node_t *node) {
         arg = arg->next;
     }
 
-    MalType *ret = EVAL(NewMalList(list), GetFnWrapper(fn)->env);
+    MalType *ret;
+    if (IsCoreFn(fn)) {
+        // TODO: creating a new repl is not very optimal
+        ret = EVAL(NewMalList(list), create_repl());
+    } else {
+        ret = EVAL(NewMalList(list), GetFnWrapper(fn)->env);
+    }
 
     // reset
-    memcpy(GetAtom(atom), ret, sizeof(MalType));
+    memcpy(atom->value.AtomValue, ret, sizeof(MalType));
 
     return GetAtom(atom);
 }

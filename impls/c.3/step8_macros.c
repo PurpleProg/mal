@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include <string.h>
 
-// #define DEBUG
-
 MalType *READ(char *line);
 MalType *EVAL(MalType *AST, env_t *env);
 char    *PRINT(MalType *AST);
@@ -32,6 +30,7 @@ int main(int argc, char *argv[]) {
 
     repl_env = create_repl();
 
+    rep("(def! DEBUG-EVAL false)", repl_env);
     rep("(def! not (fn* (condition) (if condition false true)))", repl_env);
     rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp "
         "f) "
@@ -218,9 +217,14 @@ MalType *READ(char *line) {
 
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
-#ifdef DEBUG
-        printf("EVAL %s\n", pr_str(AST, 0));
-#endif
+
+        MalType *do_contain_debug_eval = get(env, "DEBUG-EVAL");
+        if (do_contain_debug_eval != NULL) {
+            if (!IsFalse(do_contain_debug_eval) &&
+                !IsNil(do_contain_debug_eval)) {
+                printf("EVAL :%s\n", pr_str(AST, 1));
+            }
+        }
         if (AST == NULL) {
             return AST;
         }

@@ -15,7 +15,8 @@ MalType *get(env_t *env, MalSymbol *key) {
         return get(env->outer, key);
     }
     if (ret == NULL && env->outer == NULL) {
-        printf("key : %s not found\n", key);
+        // TODO: raise an error
+        return ret;
     }
     return ret;
 }

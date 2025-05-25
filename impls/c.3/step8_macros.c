@@ -188,9 +188,9 @@ MalType *quasiquote(MalType *AST, env_t *env) {
 
         MalList *new_list = GC_MALLOC(sizeof(MalList));
         append(new_list, NewMalSymbol("vec"), sizeof(MalType));
-        append(new_list, qq_iterative(GetList(AST), env), sizeof(MalType));
+        append(new_list, qq_iterative(GetVector(AST), env), sizeof(MalType));
 
-        return EVAL(quasiquote(NewMalList(new_list), env), env);
+        return NewMalList(new_list);
     } else if (IsSymbol(AST) || IsHashmap(AST)) {
         // If ast is a map or a symbol,
         // return a list containing:

@@ -82,48 +82,93 @@ MalType *NewMalCoreFunction(MalCoreFn func) {
 }
 
 int IsListOrVector(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_LIST || AST->type == MAL_VECTOR;
 }
 int IsSymbol(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_SYMBOL;
 }
 int IsInt(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_INT;
 }
 int IsList(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_LIST;
 }
 int IsVector(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_VECTOR;
 }
 int IsString(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_STRING;
 }
 int IsCoreFn(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_CORE_FN;
 }
 int IsFn(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_FN;
 }
 int IsFnWrapper(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_FN_WRAPER;
 }
 int IsNil(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_NIL;
 }
 int IsTrue(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_TRUE;
 }
 int IsFalse(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_FALSE;
 }
 int IsKeyword(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_KEYWORD;
 }
 int IsAtom(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_ATOM;
 }
 int IsHashmap(MalType *AST) {
+    if (AST == NULL) {
+        return 0;
+    }
     return AST->type == MAL_HASHMAP;
 }
 

@@ -179,7 +179,7 @@ char *pr_env(env_t *env) {
     }
     while (current_node != NULL) {
         // key
-        strcat(string, current_node->data);
+        strcat(string, pr_str(current_node->data, 0));
         strcat(string, " : ");
         // value
         if (current_node->next->data == NULL) {

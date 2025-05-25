@@ -85,7 +85,82 @@ int main(int argc, char *argv[]) {
     return 1;
 }
 
-MalType *quasiquote(MalType *AST) {
+MalType *quasiquote(MalType *AST, env_t *env);
+MalType *qq_iterative(MalList *args, env_t *env) {
+    // AST is a list that DONT start with unquote
+
+    if (args->data == NULL) {
+        node_t *list_result = GC_MALLOC(sizeof(node_t));
+
+        return NewMalList(list_result);
+    }
+
+    node_t *list_result = GC_MALLOC(sizeof(node_t));
+
+    // iterate over reversed list
+    node_t *reversed_list = GC_MALLOC(sizeof(node_t));
+    reversed_list         = NULL;
+    reverse_list(args, &reversed_list);
+    node_t *node = reversed_list;
+
+    while (node != NULL) {
+        // NOTE: elt can be NULL, just an empty list
+        MalType *elt = node->data;
+        // if elt is a list starting with "split-unquote"
+        if (IsListOrVector(elt)) {
+            MalList *list = GetList(elt);
+            if (is_empty(list)) {
+                // TODO: raise error
+                list = GC_MALLOC(sizeof(MalList));
+                return NewMalListCopy(args);
+            }
+            MalType *elt_first_element = list->data;
+            if (IsSymbol(elt_first_element)) {
+                if (strcmp(GetSymbol(elt_first_element), "splice-unquote") ==
+                    0) {
+                    // replace the current result with a list containing:
+                    // the "concat" symbol,
+                    // the second element of elt,
+
+                    node_t *new_list_result = GC_MALLOC(sizeof(node_t));
+
+                    append(new_list_result, NewMalSymbol("concat"),
+                           sizeof(MalType));
+                    append(new_list_result, list->next->data, sizeof(MalType));
+                    append(new_list_result, NewMalList(list_result),
+                           sizeof(MalType));
+
+                    // replace current result with new_result
+                    list_result = new_list_result;
+
+                    node = node->next;
+                    continue;
+                } // if (first element == "splice-unquote")
+            } // if (first_element->type == MAL_SYMBOL)
+
+        } // if (elt->type == MAL_LIST or vec)
+
+        // Else replace the current result with a list containing:
+        // the "cons" symbol,
+        // the result of calling quasiquote with elt as argument,
+        // then the previous result.
+
+        // new list result
+        node_t *new_list_result = GC_MALLOC(sizeof(node_t));
+
+        append(new_list_result, NewMalSymbol("cons"), sizeof(MalType));
+        append(new_list_result, quasiquote(elt, env), sizeof(MalType));
+        append(new_list_result, NewMalList(list_result), sizeof(MalType));
+
+        // replace current result with new_result
+        list_result = new_list_result;
+
+        node = node->next;
+    } // iterate over elt in reverse order
+
+    return NewMalList(list_result);
+}
+MalType *quasiquote(MalType *AST, env_t *env) {
     if (IsList(AST)) {
         MalList *list = GetList(AST);
 
@@ -108,97 +183,14 @@ MalType *quasiquote(MalType *AST) {
             }
         }
 
-        // AST is a list that DONT start with unquote
-
-        // list result
-        node_t *list_result = GC_MALLOC(sizeof(node_t));
-
-        // iterate over reversed list
-        node_t *reversed_list = GC_MALLOC(sizeof(node_t));
-        reverse_list(list, &reversed_list);
-        node_t *node = reversed_list;
-        while (!is_empty(node)) {
-            MalType *elt = node->data;
-            if (elt == NULL) {
-                printf("elt is NULL\n");
-            }
-            if (elt->value.ListValue == NULL) {
-                printf("elt->value is NULL\n");
-            }
-
-            // if elt is a list starting with "split-unquote"
-            if (IsListOrVector(elt)) {
-                MalList *list = GetList(elt);
-                if (is_empty(list)) {
-                    return AST;
-                }
-                MalType *elt_first_element = list->data;
-                if (IsSymbol(elt_first_element)) {
-                    if (strcmp(GetSymbol(elt_first_element),
-                               "splice-unquote") == 0) {
-                        // replace the current result with a list containing:
-                        // the "concat" symbol,
-                        // the second element of elt,
-
-                        // new list result
-                        node_t *new_list_result = GC_MALLOC(sizeof(node_t));
-
-                        append(new_list_result, NewMalSymbol("concat"),
-                               sizeof(MalType));
-
-                        // the second element of elt,
-                        MalType *next_elt_element = list->next->data;
-                        append(new_list_result, next_elt_element,
-                               sizeof(MalType));
-
-                        // then the previous result
-                        append(new_list_result, NewMalList(list_result),
-                               sizeof(MalType));
-
-                        // replace current result with new_result
-                        list_result = new_list_result;
-
-                        node = node->next;
-                        continue;
-                    } // if (first element == "splice-unquote")
-                } // if (first_element->type == MAL_SYMBOL)
-
-            } // if (elt->type == MAL_LIST or vec)
-
-            // Else replace the current result with a list containing:
-            // the "cons" symbol,
-            // the result of calling quasiquote with elt as argument,
-            // then the previous result.
-
-            // new list result
-            node_t *new_list_result = GC_MALLOC(sizeof(node_t));
-
-            // the "cons" symbol,
-            append(new_list_result, NewMalSymbol("cons"), sizeof(MalType));
-
-            // the result of calling quasiquote with elt as argument,
-            MalType *ret = quasiquote(elt);
-            // printf("rec quasiquote call : %s\n", pr_str(ret, 0));
-            append(new_list_result, ret, sizeof(MalType));
-
-            // then the previous result
-            append(new_list_result, NewMalList(list_result), sizeof(MalType));
-
-            // replace current result with new_result
-            // memcpy(list_result, new_list_result, sizeof(node_t));
-            list_result = new_list_result;
-
-            node = node->next;
-        } // iterate over elt in reverse order
-
-        return NewMalList(list_result);
-
+        return qq_iterative(list, env);
     } else if (IsVector(AST)) {
+
         MalList *new_list = GC_MALLOC(sizeof(MalList));
         append(new_list, NewMalSymbol("vec"), sizeof(MalType));
-        append(new_list, NewMalListCopy(GetList(AST)), sizeof(MalType));
+        append(new_list, qq_iterative(GetList(AST), env), sizeof(MalType));
 
-        return EVAL(quasiquote(NewMalList(new_list)), repl_env);
+        return EVAL(quasiquote(NewMalList(new_list), env), env);
     } else if (IsSymbol(AST) || IsHashmap(AST)) {
         // If ast is a map or a symbol,
         // return a list containing:
@@ -213,9 +205,6 @@ MalType *quasiquote(MalType *AST) {
         return NewMalList(list);
     }
     // Else return ast unchanged.
-    // Such forms are not affected by evaluation,
-    // so you may quote them as in the previous case
-    // if implementation is easier.
     return AST;
 }
 
@@ -231,6 +220,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
             if (!IsFalse(do_contain_debug_eval) &&
                 !IsNil(do_contain_debug_eval)) {
                 printf("EVAL: %s\n", pr_str(AST, 1));
+                // printf("ENV : %s\n", pr_env(env));
             }
         }
         if (AST == NULL) {
@@ -318,7 +308,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     new_env->outer = env;
                     new_env->data  = map;
 
-                    // define the binding list
+                    // define the binding list AST[1]
                     MalList *bindings_list = NULL;
                     if (IsListOrVector(element->next->data)) {
                         bindings_list = GetList(element->next->data);
@@ -342,10 +332,15 @@ MalType *EVAL(MalType *AST, env_t *env) {
                         }
                         binding = binding->next->next;
                     }
+                    printf("let ret\n");
+                    printf("going to eval %s\n",
+                           pr_str(element->next->next->data, 0));
+                    printf("in enc %s\n", pr_env(new_env));
+                    return EVAL(element->next->next->data, new_env);
 
                     // TCO
                     env = new_env;
-                    AST = element->next->next->data;
+                    AST = element->next->next->data; // AST[2]
                     continue;
                 }
                 // do
@@ -449,7 +444,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     if (element->next == NULL) {
                         return NewMalNIL();
                     }
-                    AST = quasiquote(element->next->data);
+                    AST = quasiquote(element->next->data, env);
                     continue;
                 }
                 // defmacro!

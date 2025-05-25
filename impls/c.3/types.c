@@ -43,6 +43,13 @@ MalType *NewMalSymbol(const char *string) {
     memcpy(result->value.SymbolValue, string, strlen(string));
     return result;
 }
+MalType *NewMalKeyword(const char *string) {
+    MalType *result           = GC_MALLOC(sizeof(MalType));
+    result->type              = MAL_KEYWORD;
+    result->value.SymbolValue = GC_MALLOC(strlen(string));
+    memcpy(result->value.SymbolValue, string, strlen(string));
+    return result;
+}
 MalType *NewMalTrue() {
     MalType *result         = GC_MALLOC(sizeof(MalType));
     result->type            = MAL_TRUE;

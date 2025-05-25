@@ -98,6 +98,7 @@ MalType *NewMalList(MalList *list);
 MalType *NewMalListCopy(MalList *list);
 MalType *NewMalVector(MalList *list);
 MalType *NewMalString(const char *string);
+MalType *NewMalKeyword(const char *string);
 MalType *NewMalTrue();
 MalType *NewMalFalse();
 MalType *NewMalNIL();

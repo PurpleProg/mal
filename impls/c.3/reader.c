@@ -145,18 +145,15 @@ MalType *read_hashmap(reader_t *reader) {
     return hashmap;
 }
 MalType *read_list(reader_t *reader, int vector) {
-    MalType *list = GC_malloc(sizeof(MalType));
+    MalType *list;
     if (vector == 1) {
-        list->type = MAL_VECTOR;
+        list = NewMalVector(GC_MALLOC(sizeof(MalList)));
     } else {
-        list->type = MAL_LIST;
+        list = NewMalList(GC_MALLOC(sizeof(MalList)));
     }
-    list->value.ListValue       = GC_malloc(sizeof(MalList));
-    list->value.ListValue->next = NULL;
-    list->value.ListValue->data = NULL;
 
     // handle single parentesis input
-    if (reader->tokens == NULL) {
+    if (reader->tokens->next == NULL) {
         printf("only one token\n");
         return list;
     }
@@ -174,8 +171,8 @@ MalType *read_list(reader_t *reader, int vector) {
 
         // if the tokens dont have a matching end token
         // or reach end of file
-        if (reader->tokens == NULL) {
-            printf("last token : '%s'\n", reader_peek(reader));
+        if (reader->tokens->next == NULL) {
+            // TODO: raise error
             printf("unbalanced\n");
             return list;
         }
@@ -202,17 +199,15 @@ MalType *read_atom(reader_t *reader) {
 
     char *token = reader_peek(reader);
 
+    // check if token is a number
     char *endptr = GC_malloc(strlen(token));
     long  number = strtol(token, &endptr, 10);
 
     if (endptr != token) {
-        atom->type            = MAL_INT;
-        atom->value.IntValue  = GC_malloc(sizeof(MalInt));
-        *atom->value.IntValue = number;
-        return atom;
+        return NewMalInt(number);
     }
-
     // token is not a number
+
     if (*token == '"') {
         // remove surrounding "
         token += sizeof(char);
@@ -220,7 +215,7 @@ MalType *read_atom(reader_t *reader) {
 
         char *new_string = GC_MALLOC(strlen(token));
 
-        // transform  \" "
+        // apply \ patterns
         int i_new_string = 0;
         for (unsigned long i_token = 0; i_token < strlen(token); i_token++) {
             if (token[i_token] == '\\') {
@@ -236,6 +231,7 @@ MalType *read_atom(reader_t *reader) {
                     i_token++;
                 } else {
                     // unreconnized /patern
+                    // TODO: raise error
                     // just skip it ?
                     i_token++;
                 }
@@ -246,48 +242,28 @@ MalType *read_atom(reader_t *reader) {
             i_new_string += 1;
         }
 
-        atom->type              = MAL_STRING;
-        atom->value.StringValue = GC_malloc(strlen(token));
-        memcpy(atom->value.StringValue, new_string, strlen(new_string));
-        return atom;
+        return NewMalString(new_string);
     }
     if (*token == ':') {
         // remove first :
         token += sizeof(char);
-        atom->type              = MAL_KEYWORD;
-        atom->value.SymbolValue = GC_MALLOC(strlen(token));
-        memcpy(atom->value.SymbolValue, token, strlen(token));
-        printf("keyword: %s\n", pr_str(atom, 0));
-        return atom;
+        return NewMalKeyword(token);
     }
 
     // special forms
-    // true
     if (strcmp(token, "true") == 0) {
-        MalType *true = GC_MALLOC(sizeof(MalType));
-        true->type    = MAL_TRUE;
-        return true;
+        return NewMalTrue();
     }
-    // false
     if (strcmp(token, "false") == 0) {
-        MalType *false = GC_MALLOC(sizeof(MalType));
-        false->type    = MAL_FALSE;
-        return false;
+        return NewMalFalse();
     }
-    // nil
     if (strcmp(token, "nil") == 0) {
-        MalType *nil_ret = GC_MALLOC(sizeof(MalType));
-        nil_ret->type    = MAL_NIL;
-        return nil_ret;
+        return NewMalNIL();
     }
 
-    // if token is not a number nor a string nor a keyword, it's a
-    // symbol
-    atom->type              = MAL_SYMBOL;
-    atom->value.SymbolValue = GC_malloc(strlen(token));
-    memcpy(atom->value.SymbolValue, token, strlen(token));
-
-    return atom;
+    // if token is not a number nor a string nor a keyword
+    // it must be a symbol
+    return NewMalSymbol(token);
 }
 
 char *reader_next(reader_t *reader) {

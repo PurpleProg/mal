@@ -248,8 +248,34 @@ MalType *list(node_t *node) {
         new_list->data   = NULL;
         node             = new_list;
     }
+    MalType *arg = node->data;
+    if (arg == NULL) {
+        // empty list
+        return NewMalList(GC_MALLOC(sizeof(MalList)));
+    }
 
-    return NewMalList(node);
+    return NewMalListCopy(node);
+}
+MalType *vec(node_t *node) {
+    if (node->data == NULL) {
+        // list is empty, allocate a new one
+        node_t *new_list = GC_MALLOC(sizeof(node_t));
+        new_list->next   = NULL;
+        new_list->data   = NULL;
+        node             = new_list;
+    }
+
+    MalType *arg = node->data;
+    if (arg == NULL) {
+        // empty list
+        return NewMalVector(GC_MALLOC(sizeof(MalList)));
+    }
+    if (!IsListOrVector(arg)) {
+        printf("vec take a list or a vector as arg\n");
+        return NewMalNIL();
+    }
+
+    return NewMalVector(GetList(arg));
 }
 MalType *list_question_mark(node_t *node) {
     if (node->data == NULL) {
@@ -367,23 +393,6 @@ MalType *concat(node_t *node) {
     }
 
     return ret;
-}
-MalType *vec(node_t *node) {
-    if (node->data == NULL) {
-        // list is empty, allocate a new one
-        node_t *new_list = GC_MALLOC(sizeof(node_t));
-        new_list->next   = NULL;
-        new_list->data   = NULL;
-        node             = new_list;
-    }
-
-    MalType *arg = node->data;
-    if (!IsListOrVector(arg)) {
-        printf("vec take a list of vector as arg\n");
-        return NewMalNIL();
-    }
-
-    return arg;
 }
 MalType *nth(node_t *node) {
     MalType *nil = NewMalNIL();

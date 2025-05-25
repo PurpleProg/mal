@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 }
 
 MalType *quasiquote(MalType *AST) {
-    if (IsListOrVector(AST)) {
+    if (IsList(AST)) {
         MalList *list = GetList(AST);
 
         if (is_empty(list)) {
@@ -188,6 +188,11 @@ MalType *quasiquote(MalType *AST) {
 
         return NewMalList(list_result);
 
+    } else if (IsVector(AST)) {
+        MalList *new_list = GC_MALLOC(sizeof(MalList));
+        append(new_list, NewMalSymbol("vec"), sizeof(MalType));
+        append(new_list, NewMalListCopy(GetList(AST)), sizeof(MalType));
+        return EVAL(quasiquote(NewMalList(new_list)), repl_env);
     } else if (IsSymbol(AST) || IsHashmap(AST)) {
         // If ast is a map or a symbol,
         // return a list containing:
@@ -497,7 +502,12 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 }
 
                 // check for Clojure-style variadic function parameters
-                node_t *binds = GetList(f->param);
+                node_t *binds;
+                if (f->param == NULL) {
+                    binds = NULL;
+                } else {
+                    binds = GetList(f->param);
+                }
                 node_t *exprs;
                 if (do_eval_macro) {
                     exprs = unevaluated_args;
@@ -621,9 +631,6 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
                 // skip symbol
                 element = element->next;
-                if (element == NULL) {
-                    printf("element is NULL\n");
-                }
 
                 // add the rest of the list to a list of evaluated things
 

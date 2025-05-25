@@ -1,11 +1,17 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-#include "hashmap.h"
 #include "linked_list.h"
 
 // MalType
 typedef struct MalType MalType;
+
+typedef node_t map_t;
+
+int   map_set(map_t *map, MalType *key, MalType *value);
+void *map_get(map_t *map, MalType *key);
+int   map_contains(map_t *map, MalType *key);
+void  map_remove(map_t *map, MalType *key);
 
 typedef enum {
     MAL_SYMBOL,

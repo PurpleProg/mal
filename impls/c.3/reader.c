@@ -28,8 +28,6 @@ MalType *read_form(reader_t *reader) {
     case '[': return read_list(reader, 1);
     case '{': return read_hashmap(reader);
     /* ############ READER MACRO ############## */
-    // TODO: implement them
-    // not done
     case '\'': {
         MalType *ret         = GC_MALLOC(sizeof(MalType));
         ret->type            = MAL_LIST;
@@ -195,11 +193,12 @@ MalType *read_hashmap(reader_t *reader) {
 
         MalType *key = GC_malloc(sizeof(MalType));
         key          = read_form(reader);
+        printf("hashmap key : %s\n", pr_str(key, 0));
 
         // append the ret of read_form to the current hashmap
         // that is the key
-        if (key->type != MAL_STRING && key->type != MAL_KEYWORD) {
-            printf("key can only be string\n");
+        if (!IsString(key) && !IsKeyword(key)) {
+            printf("key can only be string or keyword\n");
             return hashmap;
         }
 
@@ -223,11 +222,13 @@ MalType *read_hashmap(reader_t *reader) {
         MalType *value = GC_malloc(sizeof(MalType));
         value          = read_form(reader);
 
+        printf("hashmap value : %s\n", pr_str(value, 0));
         map_set(hashmap->value.HashmapValue, key->value.StringValue, value);
 
         token = reader_next(reader);
     }
 
+    printf("hashmap : %s\n", pr_str(hashmap, 0));
     return hashmap;
 }
 MalType *read_list(reader_t *reader, int vector) {
@@ -340,8 +341,9 @@ MalType *read_atom(reader_t *reader) {
         // remove first :
         token += sizeof(char);
         atom->type              = MAL_KEYWORD;
-        atom->value.SymbolValue = GC_malloc(sizeof(MalSymbol));
+        atom->value.SymbolValue = GC_MALLOC(strlen(token));
         memcpy(atom->value.SymbolValue, token, strlen(token));
+        printf("keyword: %s\n", pr_str(atom, 0));
         return atom;
     }
 

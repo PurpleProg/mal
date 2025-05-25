@@ -2,7 +2,6 @@
 #include "EVAL.h"
 #include "env.h"
 #include "gc.h"
-#include "hashmap.h"
 #include "linked_list.h"
 #include "printer.h"
 #include "reader.h"
@@ -917,14 +916,11 @@ env_t *create_repl() {
     env_t *env = create_env(NULL, NULL, NULL);
 
     node_t *function_pointers_list = GC_MALLOC(sizeof(node_t));
-    function_pointers_list->next   = NULL;
-    function_pointers_list->data   = NULL;
 
     node_t *symbol_list = GC_MALLOC(sizeof(node_t));
-    symbol_list->next   = NULL;
-    symbol_list->data   = NULL;
 
     // yes, hard coded.
+    // why :'(
     append(function_pointers_list, NewMalCoreFunction(macro_question_mark),
            sizeof(MalType));
     append(symbol_list, "macro?", 6);
@@ -1030,7 +1026,7 @@ env_t *create_repl() {
     append(symbol_list, ">=", 2);
 
     while (symbol_list != NULL && function_pointers_list != NULL) {
-        set(env, symbol_list->data, function_pointers_list->data);
+        set(env, NewMalSymbol(symbol_list->data), function_pointers_list->data);
 
         symbol_list            = symbol_list->next;
         function_pointers_list = function_pointers_list->next;

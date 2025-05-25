@@ -1,7 +1,6 @@
 #include "core.h"
 #include "env.h"
 #include "gc.h"
-#include "hashmap.h"
 #include "linked_list.h"
 #include "printer.h"
 #include "reader.h"
@@ -33,8 +32,7 @@ int main(int argc, char *argv[]) {
     rep("(def! DEBUG-EVAL false)", repl_env);
     rep("(def! not (fn* (condition) (if condition false true)))", repl_env);
     rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp "
-        "f) "
-        "\"\\nnil)\")) ) ))",
+        "f) \"\\nnil)\")) ) ))",
         repl_env);
     rep("(defmacro! cond "
         "  (fn* (& xs) "
@@ -49,21 +47,20 @@ int main(int argc, char *argv[]) {
         "        )"
         "        (cons 'cond (rest (rest xs)))" // false
         "      )"
-        "      (str \"no more\")"
         "    )" // func body
         "  )"
         ")",
         repl_env);
 
     // add eval to the repl
-    set(repl_env, "eval", NewMalCoreFunction(eval));
+    set(repl_env, NewMalString("eval"), NewMalCoreFunction(eval));
 
     // create *ARGV*
     node_t *args_list = GC_MALLOC(sizeof(node_t));
     for (int i = 2; i < argc; i++) {
         append(args_list, NewMalString(argv[i]), sizeof(MalType));
     }
-    set(repl_env, "*ARGV*", NewMalList(args_list));
+    set(repl_env, NewMalString("*ARGV*"), NewMalList(args_list));
 
     // check if the interpretor is called with args
     if (argc > 1) {
@@ -218,11 +215,11 @@ MalType *READ(char *line) {
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
 
-        MalType *do_contain_debug_eval = get(env, "DEBUG-EVAL");
+        MalType *do_contain_debug_eval = get(env, NewMalSymbol("DEBUG-EVAL"));
         if (do_contain_debug_eval != NULL) {
             if (!IsFalse(do_contain_debug_eval) &&
                 !IsNil(do_contain_debug_eval)) {
-                printf("EVAL :%s\n", pr_str(AST, 1));
+                printf("EVAL: %s\n", pr_str(AST, 1));
             }
         }
         if (AST == NULL) {
@@ -231,6 +228,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
         int eval_vector = 0;
         switch (AST->type) {
         case MAL_SYMBOL: {
+            // TODO: maybe just return get(env, AST)
             // NOTE: get symbol from env
             // and eval (true, false, nil)
             char *symbol = GetSymbol(AST);
@@ -248,7 +246,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 return NewMalNIL();
             }
 
-            MalType *ret = get(env, symbol);
+            MalType *ret = get(env, NewMalString(symbol));
             if (ret == NULL) {
                 return NewMalNIL();
             }
@@ -284,8 +282,9 @@ MalType *EVAL(MalType *AST, env_t *env) {
                         printf("def! shall take two args");
                         return AST;
                     }
-                    MalSymbol *key   = GetSymbol(element->next->data);
-                    MalType   *value = EVAL(element->next->next->data, env);
+                    MalType *key   = element->next->data;
+                    MalType *value = EVAL(element->next->next->data, env);
+                    // TODO: check if EVAL returned an error
                     if (value != NULL) {
                         set(env, key, value);
                     }
@@ -325,9 +324,8 @@ MalType *EVAL(MalType *AST, env_t *env) {
                             return AST;
                         }
 
-                        MalSymbol *key = GetSymbol(binding->data);
-                        MalType   *value =
-                            EVAL((MalType *)binding->next->data, new_env);
+                        MalType *key   = binding->data;
+                        MalType *value = EVAL(binding->next->data, new_env);
                         if (value != NULL) {
                             set(new_env, key, value);
                         }
@@ -453,8 +451,8 @@ MalType *EVAL(MalType *AST, env_t *env) {
                         printf("defmacro! shall take two args");
                         return AST;
                     }
-                    MalSymbol *key   = GetSymbol(element->next->data);
-                    MalType   *value = EVAL(element->next->next->data, env);
+                    MalType *key   = element->next->data;
+                    MalType *value = EVAL(element->next->next->data, env);
                     if (value == NULL) {
                         printf("defmacro! eval arg returned NULL\n");
                         return AST;
@@ -576,7 +574,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (do_eval_macro) {
                     env_t *new_env =
                         create_env(f->env, NewMalList(binds_without_and_symbol),
-                                   unevaluated_args);
+                                   NewMalList(unevaluated_args));
 
                     if (new_env == NULL) {
                         printf("macro new_env is NULL\n");
@@ -614,7 +612,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 // TCO
                 AST = f->ast;
                 env = create_env(f->env, NewMalList(binds_without_and_symbol),
-                                 evaluated_args);
+                                 NewMalList(evaluated_args));
 
                 continue;
             }
@@ -671,6 +669,17 @@ MalType *EVAL(MalType *AST, env_t *env) {
         case MAL_ATOM: {
             AST = AST->value.AtomValue;
             continue;
+        }
+        case MAL_HASHMAP: {
+            // EVAL each value (and key, caus it's easyer like that)
+            MalHashmap *hashmap = GetHashmap(AST);
+
+            while (hashmap != NULL) {
+                hashmap->data = EVAL(hashmap->data, env);
+                printf("evaluated hmap data : %s\n", pr_str(hashmap->data, 0));
+                hashmap = hashmap->next;
+            };
+            return AST;
         }
         default: {
             return AST;

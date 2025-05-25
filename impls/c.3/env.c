@@ -1,62 +1,63 @@
 #include "env.h"
 #include "gc.h"
-#include "hashmap.h"
+#include "printer.h"
 #include "types.h"
 #include <gc/gc.h>
 #include <stdio.h>
 
-int set(env_t *env, MalSymbol *key, MalType *value) {
+int set(env_t *env, MalType *key, MalType *value) {
     return map_set(env->data, key, value);
 }
 
-MalType *get(env_t *env, MalSymbol *key) {
+MalType *get(env_t *env, MalType *key) {
     MalType *ret = map_get(env->data, key);
     if (ret == NULL && env->outer != NULL) {
         return get(env->outer, key);
     }
     if (ret == NULL && env->outer == NULL) {
         // TODO: raise an error
-        return ret;
+        return NewMalNIL();
     }
     return ret;
 }
 
-env_t *create_env(env_t *outer, MalType *binds, node_t *exprs) {
+env_t *create_env(env_t *outer, MalType *binds, MalType *exprs) {
     env_t *env = GC_MALLOC(sizeof(env_t));
     env->data  = GC_MALLOC(sizeof(map_t));
-    if (outer == NULL) {
-        env->outer = NULL;
-    } else {
-        env->outer = outer;
-    }
+    env->outer = outer;
 
     if (binds == NULL) {
         return env;
     }
-    if (binds->type != MAL_LIST && binds->type != MAL_VECTOR) {
+    if (!IsListOrVector(binds)) {
         printf("env binds must be a list or a vector\n");
         return env;
     }
-    node_t *binds_list = binds->value.ListValue;
+    if (!IsListOrVector(exprs)) {
+        printf("env exprs must be a list or a vector\n");
+        return env;
+    }
 
-    if (binds_list == NULL || exprs == NULL) {
+    node_t *binds_list = GetList(binds);
+    node_t *exprs_list = GetList(exprs);
+
+    if (binds_list == NULL || exprs_list == NULL) {
         return env;
     }
-    if (binds_list->data == NULL || exprs->data == NULL) {
+    if (binds_list->data == NULL || exprs_list->data == NULL) {
         return env;
     }
-    while (binds_list != NULL && exprs != NULL) {
-        if (((MalType *)binds_list->data)->type != MAL_SYMBOL) {
-            printf("env binds must be symbols\n");
+    while (binds_list != NULL && exprs_list != NULL) {
+        if (!IsSymbol(binds_list->data) && !IsKeyword(binds_list->data)) {
+            printf("env binds must be symbols or keyword\n");
             return NULL;
         }
-        char *bind = ((MalType *)binds_list->data)->value.SymbolValue;
-        set(env, bind, exprs->data);
+        set(env, binds_list->data, exprs_list->data);
 
         binds_list = binds_list->next;
-        exprs      = exprs->next;
+        exprs_list = exprs_list->next;
     }
-    if ((binds_list == NULL) ^ (exprs == NULL)) {
+    if ((binds_list == NULL) ^ (exprs_list == NULL)) {
         fprintf(stderr, "binds_list and exprs are different lenght, some have "
                         "been discarded\n");
     }

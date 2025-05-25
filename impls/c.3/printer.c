@@ -13,9 +13,9 @@ char *pr_str(MalType *AST, int print_readably) {
         return string;
     }
 
-    if (AST->value.IntValue == NULL && AST->type != MAL_NIL &&
-        AST->type != MAL_TRUE && AST->type != MAL_FALSE) {
-        printf("/!\\ AST.value is NULL but type is allocated : ");
+    if (!IsNil(AST) && !IsTrue(AST) && !IsFalse(AST) &&
+        AST->value.IntValue == NULL) {
+        printf("! AST.value is NULL but type is allocated\n");
         return string;
     }
 
@@ -26,8 +26,9 @@ char *pr_str(MalType *AST, int print_readably) {
         return string;
     }
     case MAL_KEYWORD: {
+        printf("reading kw '%s'\n", AST->value.KeywordValue);
         strcat(string, ":");
-        strcat(string, AST->value.SymbolValue);
+        strcat(string, AST->value.KeywordValue);
         return string;
     }
     case MAL_SYMBOL: {
@@ -135,18 +136,16 @@ char *pr_str(MalType *AST, int print_readably) {
         strcat(string, "{");
         map_t *node = AST->value.HashmapValue;
 
-        while (node != NULL && node->data != NULL && node->next != NULL &&
-               node->next->data != NULL) {
-            // key
-            strcat(string, "\"");
+        while (node != NULL && node->next != NULL) {
             strcat(string, (char *)node->data);
-            strcat(string, "\" ");
 
-            // value
-            strcat(string, pr_str((MalType *)node->next->data, print_readably));
-            if (node->next->next != NULL) {
+            if (node->next != NULL) {
                 strcat(string, " ");
             }
+
+            printf("value : %s\n",
+                   pr_str((MalType *)node->data, print_readably));
+            strcat(string, pr_str((MalType *)node->data, print_readably));
 
             node = node->next->next;
         }

@@ -1,4 +1,3 @@
-#include "hashmap.h"
 #include "gc.h"
 #include "linked_list.h"
 #include "types.h"
@@ -6,7 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
-int map_set(map_t *map, char *key, void *value) {
+char *GetStringValue(MalType *atom) {
+    return atom->value.StringValue;
+}
+
+int map_set(map_t *map, MalType *key, MalType *value) {
     if (map_contains(map, key)) {
         node_t *current_node = map;
         if (map == NULL) {
@@ -20,7 +23,9 @@ int map_set(map_t *map, char *key, void *value) {
             if (current_node->data == NULL) {
                 printf("data is null");
             }
-            if (strcmp(key, current_node->data) == 0) {
+            // accesing throug StringValue to hande symbol or keyword
+            if (strcmp(GetStringValue(key),
+                       GetStringValue(current_node->data)) == 0) {
                 // replace old value with new one
                 current_node->next->data = value;
                 return 0;
@@ -30,29 +35,24 @@ int map_set(map_t *map, char *key, void *value) {
         }
 
     } else {
-        append(map, key, strlen(key) + 1);
+        append(map, key, sizeof(MalType));
         append(map, value, sizeof(MalType));
     }
     return 0;
 }
 
-void *map_get(map_t *map, char *key) {
-    node_t  *current_node = map;
-    MalType *nil          = GC_MALLOC(sizeof(MalType));
-    nil->type             = MAL_NIL;
-    nil->value.NilValue   = NULL;
+void *map_get(map_t *map, MalType *key) {
+    node_t *current_node = map;
 
     if (map == NULL) {
-        printf("map is null\n");
         return NULL;
     }
     if (map->data == NULL) {
-        printf("hashmap get: map is empty\n");
         return NULL;
     }
     while (current_node != NULL) {
-        // here data must be a MalSymbol (aka char *)
-        if (strcmp(key, current_node->data) == 0) {
+        if (strcmp(GetStringValue(key), GetStringValue(current_node->data)) ==
+            0) {
             return current_node->next->data;
         }
         // skip values
@@ -61,17 +61,15 @@ void *map_get(map_t *map, char *key) {
     return NULL;
 }
 
-int map_contains(map_t *map, char *key) {
+int map_contains(map_t *map, MalType *key) {
     node_t *current_node = map;
     while (current_node != NULL) {
         if (current_node->data == NULL) {
             // the map is empty
             return 0;
         }
-        // here data must be a MalSymbol (aka char *)
-        // or is it ? spend hours because it was not (just why did i think it
-        // would be)
-        if (strcmp(key, current_node->data) == 0) {
+        if (strcmp(GetStringValue(key), GetStringValue(current_node->data)) ==
+            0) {
             return 1;
         }
         // skip values
@@ -80,7 +78,8 @@ int map_contains(map_t *map, char *key) {
     return 0;
 }
 
-void map_remove(map_t *map, char *key) {
+void map_remove(map_t *map, MalType *key) {
+    printf("Test this\n");
     // not tested at all probably broken somehow but hey i dont need it yet
     node_t *current_node = map;
     while (current_node != NULL) {

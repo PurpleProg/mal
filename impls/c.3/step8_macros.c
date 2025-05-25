@@ -16,6 +16,10 @@ char    *rep(char *line, env_t *env);
 
 env_t *repl_env;
 
+// TODO:
+// fix def! assignement on error -> shouldn assigne, but does
+// fix step7 weird stuff i dont get
+
 MalType *eval(node_t *node) {
     MalType *ast = node->data;
     return EVAL(ast, repl_env);
@@ -99,7 +103,6 @@ MalType *quasiquote(MalType *AST) {
                     printf("unquoting nothing :/\n");
                     return NewMalNIL();
                 }
-                printf("unquote\n");
                 // return the second element
                 return list->next->data;
             }

@@ -271,6 +271,7 @@ MalType *vec(node_t *node) {
         return NewMalVector(GC_MALLOC(sizeof(MalList)));
     }
     if (!IsListOrVector(arg)) {
+        // TODO: raise an error
         printf("vec take a list or a vector as arg\n");
         return NewMalNIL();
     }

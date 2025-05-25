@@ -28,133 +28,46 @@ MalType *read_form(reader_t *reader) {
     case '[': return read_list(reader, 1);
     case '{': return read_hashmap(reader);
     /* ############ READER MACRO ############## */
-    case '\'': {
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
-
-        // wrap the string "quote" in a MalType
-        MalType *quote           = GC_MALLOC(sizeof(MalType));
-        quote->type              = MAL_SYMBOL;
-        quote->value.SymbolValue = GC_MALLOC(5);
-        memcpy(quote->value.SymbolValue, "quote", 5);
-
-        // get the next token and wrap it in a new reader
-        char     *next_token = reader_next(reader);
-        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
-        new_reader->position = 0;
-        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
-
-        new_reader->tokens->data = next_token;
-        new_reader->tokens->next = reader->tokens->next;
-
-        append(ret->value.ListValue, quote, sizeof(MalType));
-        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
-
-        return ret;
-    }
     case '@': {
-        // get the atom name and wrap it in a new reader
-        char     *atom_name  = reader_next(reader);
-        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
-        new_reader->position = 0;
-        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
-        append(new_reader->tokens, atom_name, strlen(atom_name));
+        reader_next(reader); // skip '
+        MalList *list = GC_MALLOC(sizeof(MalList));
+        append(list, NewMalSymbol("deref"), sizeof(MalType));
+        append(list, read_form(reader), sizeof(MalType));
 
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
+        return NewMalList(list);
+    }
+    case '\'': {
+        reader_next(reader); // skip '
+        MalList *list = GC_MALLOC(sizeof(MalList));
+        append(list, NewMalSymbol("quote"), sizeof(MalType));
+        append(list, read_form(reader), sizeof(MalType));
 
-        // wrap the string "deref" in a MalType
-        MalType *deref           = GC_MALLOC(sizeof(MalType));
-        deref->type              = MAL_SYMBOL;
-        deref->value.SymbolValue = GC_MALLOC(5);
-        memcpy(deref->value.SymbolValue, "deref", 5);
-
-        append(ret->value.ListValue, deref, sizeof(MalType));
-        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
-
-        return ret;
+        return NewMalList(list);
     }
     case '`': {
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
+        reader_next(reader); // skip `
+        MalList *list = GC_MALLOC(sizeof(MalList));
+        append(list, NewMalSymbol("quasiquote"), sizeof(MalType));
+        append(list, read_form(reader), sizeof(MalType));
 
-        // wrap the string "quasiquote" in a MalType
-        MalType *quasiquote           = GC_MALLOC(sizeof(MalType));
-        quasiquote->type              = MAL_SYMBOL;
-        quasiquote->value.SymbolValue = GC_MALLOC(10);
-        memcpy(quasiquote->value.SymbolValue, "quasiquote", 10);
-
-        // get the next token and wrap it in a new reader
-        char     *next_token = reader_next(reader);
-        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
-        new_reader->position = 0;
-        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
-
-        new_reader->tokens->data = next_token;
-        new_reader->tokens->next = reader->tokens->next;
-
-        append(ret->value.ListValue, quasiquote, sizeof(MalType));
-        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
-
-        return ret;
+        return NewMalList(list);
     }
     case '~': {
-        // might be ~ or ~@
+        // might be ~or ~@
         if (strcmp(token, "~@") == 0) {
-            // splice-splice-unquote
-            MalType *ret         = GC_MALLOC(sizeof(MalType));
-            ret->type            = MAL_LIST;
-            ret->value.ListValue = GC_MALLOC(sizeof(node_t));
+            reader_next(reader); // skip ~@
+            MalList *list = GC_MALLOC(sizeof(MalList));
+            append(list, NewMalSymbol("splice-unquote"), sizeof(MalType));
+            append(list, read_form(reader), sizeof(MalType));
 
-            // wrap the string "splice-unquote" in a MalType
-            MalType *splice_unquote           = GC_MALLOC(sizeof(MalType));
-            splice_unquote->type              = MAL_SYMBOL;
-            splice_unquote->value.SymbolValue = GC_MALLOC(14);
-            memcpy(splice_unquote->value.SymbolValue, "splice-unquote", 14);
+            return NewMalList(list);
+        }
+        reader_next(reader); // skip ~
+        MalList *list = GC_MALLOC(sizeof(MalList));
+        append(list, NewMalSymbol("unquote"), sizeof(MalType));
+        append(list, read_form(reader), sizeof(MalType));
 
-            // get the next token and wrap it in a new reader
-            char     *next_token = reader_next(reader);
-            reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
-            new_reader->position = 0;
-            new_reader->tokens   = GC_MALLOC(sizeof(node_t));
-
-            new_reader->tokens->data = next_token;
-            new_reader->tokens->next = reader->tokens->next;
-
-            append(ret->value.ListValue, splice_unquote, sizeof(MalType));
-            append(ret->value.ListValue, read_form(new_reader),
-                   sizeof(MalType));
-
-            return ret;
-
-        } // if token == ~@
-        // else unquote
-        MalType *ret         = GC_MALLOC(sizeof(MalType));
-        ret->type            = MAL_LIST;
-        ret->value.ListValue = GC_MALLOC(sizeof(node_t));
-
-        // wrap the string "unquote" in a MalType
-        MalType *unquote           = GC_MALLOC(sizeof(MalType));
-        unquote->type              = MAL_SYMBOL;
-        unquote->value.SymbolValue = GC_MALLOC(7);
-        memcpy(unquote->value.SymbolValue, "unquote", 7);
-
-        // get the next token and wrap it in a new reader
-        char     *next_token = reader_next(reader);
-        reader_t *new_reader = GC_MALLOC(sizeof(reader_t));
-        new_reader->position = 0;
-        new_reader->tokens   = GC_MALLOC(sizeof(node_t));
-
-        new_reader->tokens->data = next_token;
-        new_reader->tokens->next = reader->tokens->next;
-
-        append(ret->value.ListValue, unquote, sizeof(MalType));
-        append(ret->value.ListValue, read_form(new_reader), sizeof(MalType));
-
-        return ret;
+        return NewMalList(list);
     }
 
     default: return read_atom(reader);
@@ -243,11 +156,12 @@ MalType *read_list(reader_t *reader, int vector) {
     list->value.ListValue->data = NULL;
 
     // handle single parentesis input
-    if (reader->tokens->next == NULL) {
+    if (reader->tokens == NULL) {
         printf("only one token\n");
         return list;
     }
 
+    // skip ( or [
     char *token = reader_next(reader);
 
     char *end_token;
@@ -260,7 +174,7 @@ MalType *read_list(reader_t *reader, int vector) {
 
         // if the tokens dont have a matching end token
         // or reach end of file
-        if (reader->tokens->next == NULL) {
+        if (reader->tokens == NULL) {
             printf("last token : '%s'\n", reader_peek(reader));
             printf("unbalanced\n");
             return list;
@@ -367,7 +281,8 @@ MalType *read_atom(reader_t *reader) {
         return nil_ret;
     }
 
-    // if token is not a number nor a string nor a keyword, it's a symbol
+    // if token is not a number nor a string nor a keyword, it's a
+    // symbol
     atom->type              = MAL_SYMBOL;
     atom->value.SymbolValue = GC_malloc(strlen(token));
     memcpy(atom->value.SymbolValue, token, strlen(token));

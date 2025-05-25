@@ -29,7 +29,12 @@ int main(int argc, char *argv[]) {
 
     repl_env = create_repl();
 
-    rep("(def! DEBUG-EVAL false)", repl_env);
+    // add eval to the repl
+    set(repl_env, NewMalString("eval"), NewMalCoreFunction(eval));
+
+    // add DEBUG-EVAL
+    set(repl_env, NewMalSymbol("DEBUG-EVAL"), NewMalFalse());
+
     rep("(def! not (fn* (condition) (if condition false true)))", repl_env);
     rep("(def! load-file (fn* (f) (eval (read-string (str \"(do \" (slurp "
         "f) \"\\nnil)\")) ) ))",
@@ -51,9 +56,6 @@ int main(int argc, char *argv[]) {
         "  )"
         ")",
         repl_env);
-
-    // add eval to the repl
-    set(repl_env, NewMalString("eval"), NewMalCoreFunction(eval));
 
     // create *ARGV*
     node_t *args_list = GC_MALLOC(sizeof(node_t));
@@ -192,6 +194,7 @@ MalType *quasiquote(MalType *AST) {
         MalList *new_list = GC_MALLOC(sizeof(MalList));
         append(new_list, NewMalSymbol("vec"), sizeof(MalType));
         append(new_list, NewMalListCopy(GetList(AST)), sizeof(MalType));
+
         return EVAL(quasiquote(NewMalList(new_list)), repl_env);
     } else if (IsSymbol(AST) || IsHashmap(AST)) {
         // If ast is a map or a symbol,

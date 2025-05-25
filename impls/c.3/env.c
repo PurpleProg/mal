@@ -16,7 +16,8 @@ MalType *get(env_t *env, MalType *key) {
     }
     if (ret == NULL && env->outer == NULL) {
         // TODO: raise an error
-        return NewMalNIL();
+        printf("'%s' not found.\n", pr_str(key, 0));
+        return key;
     }
     return ret;
 }

@@ -223,7 +223,7 @@ MalType *read_hashmap(reader_t *reader) {
         value          = read_form(reader);
 
         printf("hashmap value : %s\n", pr_str(value, 0));
-        map_set(hashmap->value.HashmapValue, key->value.StringValue, value);
+        map_set(hashmap->value.HashmapValue, key, value);
 
         token = reader_next(reader);
     }

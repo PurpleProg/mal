@@ -136,18 +136,13 @@ char *pr_str(MalType *AST, int print_readably) {
         strcat(string, "{");
         map_t *node = AST->value.HashmapValue;
 
-        while (node != NULL && node->next != NULL) {
-            strcat(string, (char *)node->data);
+        while (node != NULL) {
+            strcat(string, pr_str(node->data, print_readably));
 
             if (node->next != NULL) {
                 strcat(string, " ");
             }
-
-            printf("value : %s\n",
-                   pr_str((MalType *)node->data, print_readably));
-            strcat(string, pr_str((MalType *)node->data, print_readably));
-
-            node = node->next->next;
+            node = node->next;
         }
         strcat(string, "}");
         return string;

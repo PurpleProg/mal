@@ -91,7 +91,6 @@ MalType *qq_iterative(MalList *args, env_t *env) {
 
     if (args->data == NULL) {
         node_t *list_result = GC_MALLOC(sizeof(node_t));
-
         return NewMalList(list_result);
     }
 
@@ -109,34 +108,32 @@ MalType *qq_iterative(MalList *args, env_t *env) {
         // if elt is a list starting with "split-unquote"
         if (IsListOrVector(elt)) {
             MalList *list = GetList(elt);
-            if (is_empty(list)) {
-                // TODO: raise error
-                list = GC_MALLOC(sizeof(MalList));
-                return NewMalListCopy(args);
-            }
-            MalType *elt_first_element = list->data;
-            if (IsSymbol(elt_first_element)) {
-                if (strcmp(GetSymbol(elt_first_element), "splice-unquote") ==
-                    0) {
-                    // replace the current result with a list containing:
-                    // the "concat" symbol,
-                    // the second element of elt,
+            if (!is_empty(list)) {
+                MalType *elt_first_element = list->data;
+                if (IsSymbol(elt_first_element)) {
+                    if (strcmp(GetSymbol(elt_first_element),
+                               "splice-unquote") == 0) {
+                        // replace the current result with a list containing:
+                        // the "concat" symbol,
+                        // the second element of elt,
 
-                    node_t *new_list_result = GC_MALLOC(sizeof(node_t));
+                        node_t *new_list_result = GC_MALLOC(sizeof(node_t));
 
-                    append(new_list_result, NewMalSymbol("concat"),
-                           sizeof(MalType));
-                    append(new_list_result, list->next->data, sizeof(MalType));
-                    append(new_list_result, NewMalList(list_result),
-                           sizeof(MalType));
+                        append(new_list_result, NewMalSymbol("concat"),
+                               sizeof(MalType));
+                        append(new_list_result, list->next->data,
+                               sizeof(MalType));
+                        append(new_list_result, NewMalList(list_result),
+                               sizeof(MalType));
 
-                    // replace current result with new_result
-                    list_result = new_list_result;
+                        // replace current result with new_result
+                        list_result = new_list_result;
 
-                    node = node->next;
-                    continue;
-                } // if (first element == "splice-unquote")
-            } // if (first_element->type == MAL_SYMBOL)
+                        node = node->next;
+                        continue;
+                    } // if (first element == "splice-unquote")
+                } // if (first_element->type == MAL_SYMBOL)
+            } // if !is_empty list
 
         } // if (elt->type == MAL_LIST or vec)
 
@@ -165,7 +162,6 @@ MalType *quasiquote(MalType *AST, env_t *env) {
         MalList *list = GetList(AST);
 
         if (is_empty(list)) {
-            printf("quasiquote empty list, returning AST\n");
             return AST;
         }
 

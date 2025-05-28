@@ -82,9 +82,6 @@ MalType *NewMalCoreFunction(MalCoreFn func) {
 }
 
 int IsListOrVector(MalType *AST) {
-    if (AST == NULL) {
-        return 0;
-    }
     return AST->type == MAL_LIST || AST->type == MAL_VECTOR;
 }
 int IsSymbol(MalType *AST) {
@@ -174,7 +171,7 @@ int IsHashmap(MalType *AST) {
 
 MalList *GetList(MalType *AST) {
     if (!IsListOrVector(AST)) {
-        printf("GetList arg is not a list\n");
+        printf("GetList arg is not a list nor a vector\n");
         return NULL;
     }
     return AST->value.ListValue;
@@ -193,8 +190,8 @@ MalInt *GetInt(MalType *AST) {
     return AST->value.IntValue;
 }
 MalList *GetVector(MalType *AST) {
-    if (!IsList(AST)) {
-        printf("GetList arg is not List\n");
+    if (!IsVector(AST)) {
+        printf("GetVector arg is not Vector\n");
     }
     return AST->value.ListValue;
 }

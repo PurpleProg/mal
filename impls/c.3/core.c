@@ -483,32 +483,22 @@ MalType *rest(node_t *node) {
     return NewMalList(new_list);
 }
 
-MalType *equal(node_t *node) {
+MalType *equal(MalList *node) {
     MalType *false = NewMalFalse();
     MalType *true  = NewMalTrue();
     MalType *nil   = NewMalNIL();
 
-    if (node == NULL) {
+    if (is_empty(node)) {
         printf("= with no arg \n");
         return nil;
     }
-    if (node->data == NULL) {
-        printf("= arg1 is NULL \n");
-        return nil;
-    }
-    if (node->next == NULL) {
+    if (is_empty(node->next)) {
         printf("= with only one arg\n");
         return nil;
     }
-    if (node->next->data == NULL) {
-        printf("= arg2 is NULL \n");
-        return nil;
-    }
 
-    MalType *arg1 = GC_MALLOC(sizeof(MalType));
-    MalType *arg2 = GC_MALLOC(sizeof(MalType));
-    arg1          = node->data;
-    arg2          = node->next->data;
+    MalType *arg1 = node->data;
+    MalType *arg2 = node->next->data;
 
     if (arg1->type != arg2->type) {
         if (!(IsListOrVector(arg1) && IsListOrVector(arg2))) {
@@ -523,8 +513,8 @@ MalType *equal(node_t *node) {
     case MAL_VECTOR:
         // fallback to list equality
     case MAL_LIST: {
-        node_t *node1 = GetList(arg1);
-        node_t *node2 = GetList(arg2);
+        MalList *node1 = GetList(arg1);
+        MalList *node2 = GetList(arg2);
         while (node1 != NULL && node2 != NULL) {
             // if two elements are empty:
             if (node1->data == NULL && node2->data == NULL) {
@@ -667,23 +657,63 @@ MalType *equal(node_t *node) {
     printf("= fallback\n");
     return false;
 }
-
-MalType *macro_question_mark(node_t *node) {
-    MalType *false = NewMalFalse();
-    MalType *true  = NewMalTrue();
-
+MalType *apply(MalList *node) {
+    /*
+    ** takes at least two arguments.
+    ** The first argument is a function
+    ** and the last argument is a list (or vector).
+    ** The function may be either
+    ** a built-in core function,
+    ** an user function constructed with the fn* special form,
+    ** or a macro,
+    ** not distinguished from the underlying user function).
+    ** The arguments between the function and the last argument
+    ** (if there are any)
+    ** are concatenated with the final argument
+    ** to create the arguments that are used to call the function.
+    ** The apply function allows a function to be called
+    ** with arguments that are contained in a list (or vector).
+    */
     if (is_empty(node)) {
-        return false;
+        printf("= with no arg \n");
+        // TODO: raise error
+        return NewMalNIL();
     }
-    MalType *arg = node->data;
-    printf("macro? ast: %s\n", pr_str(arg, 0));
+    if (is_empty(node->next)) {
+        printf("= with only one arg\n");
+        // TODO: raise error
+        return NewMalNIL();
+    }
 
-    if (IsFnWrapper(arg)) {
-        if (GetFnWrapper(arg)->is_macro) {
-            return true;
-        }
+    MalType *function = node->data;
+    // get the last arg
+    MalList *node_copy = node;
+    while (node_copy->next != NULL) {
+        node_copy = node_copy->next;
     }
-    return false;
+    MalType *last_arg = node_copy->data;
+
+    if (!IsFnWrapper(function) && !IsCoreFn(function)) {
+        printf("aply must take a function as arg1\n");
+        // TODO: raise error
+        return NewMalNIL();
+    }
+    if (!IsListOrVector(last_arg)) {
+        printf("aply must take a list or vector as arg2\n");
+        // TODO: raise error
+        return NewMalNIL();
+    }
+
+    MalList *result = GC_MALLOC(sizeof(MalList));
+    append(result, function, sizeof(MalType));
+
+    MalList *list = GetList(last_arg);
+    while (list != NULL) {
+        append(result, list->data, sizeof(MalType));
+        list = list->next;
+    }
+
+    return NewMalList(result);
 }
 
 // comparators
@@ -921,127 +951,251 @@ MalType *swap(node_t *node) {
     return GetAtom(atom);
 }
 
+// type prediacte
+MalType *macro_question_mark(node_t *node) {
+    MalType *false = NewMalFalse();
+    MalType *true  = NewMalTrue();
+
+    if (is_empty(node)) {
+        return false;
+    }
+    MalType *arg = node->data;
+
+    if (IsFnWrapper(arg)) {
+        if (GetFnWrapper(arg)->is_macro) {
+            return true;
+        }
+    }
+    return false;
+}
+MalType *nil_tp(MalList *node) {
+    if (IsNil(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *true_tp(MalList *node) {
+    if (IsTrue(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *false_tp(MalList *node) {
+    if (IsFalse(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *symbol_tp(MalList *node) {
+    if (IsSymbol(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *vector_tp(MalList *node) {
+    if (IsVector(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *hashmap_tp(MalList *node) {
+    if (IsHashmap(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *keyword_tp(MalList *node) {
+    if (IsKeyword(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+MalType *sequential_tp(MalList *node) {
+    if (IsListOrVector(node->data)) {
+        return NewMalTrue();
+    }
+    return NewMalFalse();
+}
+
+// create new type
+MalType *symbol(MalList *node) {
+    if (IsString(node->data)) {
+        return NewMalSymbol(GetString(node->data));
+    }
+    // TODO: raise an error
+    return NewMalNIL();
+}
+MalType *keyword(MalList *node) {
+    if (IsKeyword(node->data)) {
+        return node->data;
+    }
+    if (IsString(node->data)) {
+        char *string = GetString(node->data);
+        return NewMalKeyword(string);
+    }
+    // TODO: raise an error
+    return NewMalNIL();
+}
+MalType *vector(MalList *node) {
+    MalType *arg = node->data;
+    if (arg == NULL) {
+        // empty vector
+        return NewMalVector(GC_MALLOC(sizeof(MalList)));
+    }
+
+    // NOTE: maybe something like ListCopy here ?
+    return NewMalVector(node);
+}
+
 env_t *create_repl() {
 
     env_t *env = create_env(NULL, NULL, NULL);
 
-    node_t *function_pointers_list = GC_MALLOC(sizeof(node_t));
+    node_t *fn_ptr_list = GC_MALLOC(sizeof(node_t));
 
     node_t *symbol_list = GC_MALLOC(sizeof(node_t));
 
     // yes, hard coded.
     // why :'(
-    append(function_pointers_list, NewMalCoreFunction(macro_question_mark),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(apply), sizeof(MalType));
+    append(symbol_list, "apply", 5);
+
+    append(fn_ptr_list, NewMalCoreFn(vector), sizeof(MalType));
+    append(symbol_list, "vector", 6);
+
+    append(fn_ptr_list, NewMalCoreFn(keyword), sizeof(MalType));
+    append(symbol_list, "keyword", 7);
+
+    append(fn_ptr_list, NewMalCoreFn(symbol), sizeof(MalType));
+    append(symbol_list, "symbol", 6);
+
+    append(fn_ptr_list, NewMalCoreFn(sequential_tp), sizeof(MalType));
+    append(symbol_list, "sequential?", 11);
+
+    append(fn_ptr_list, NewMalCoreFn(keyword_tp), sizeof(MalType));
+    append(symbol_list, "keyword?", 8);
+
+    append(fn_ptr_list, NewMalCoreFn(hashmap_tp), sizeof(MalType));
+    append(symbol_list, "map?", 4);
+
+    append(fn_ptr_list, NewMalCoreFn(vector_tp), sizeof(MalType));
+    append(symbol_list, "vector?", 7);
+
+    append(fn_ptr_list, NewMalCoreFn(symbol_tp), sizeof(MalType));
+    append(symbol_list, "symbol?", 7);
+
+    append(fn_ptr_list, NewMalCoreFn(false_tp), sizeof(MalType));
+    append(symbol_list, "false?", 6);
+
+    append(fn_ptr_list, NewMalCoreFn(true_tp), sizeof(MalType));
+    append(symbol_list, "true?", 5);
+
+    append(fn_ptr_list, NewMalCoreFn(nil_tp), sizeof(MalType));
+    append(symbol_list, "nil?", 4);
+
+    append(fn_ptr_list, NewMalCoreFn(macro_question_mark), sizeof(MalType));
     append(symbol_list, "macro?", 6);
 
-    append(function_pointers_list, NewMalCoreFunction(rest), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(rest), sizeof(MalType));
     append(symbol_list, "rest", 4);
 
-    append(function_pointers_list, NewMalCoreFunction(first), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(first), sizeof(MalType));
     append(symbol_list, "first", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(nth), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(nth), sizeof(MalType));
     append(symbol_list, "nth", 3);
 
-    append(function_pointers_list, NewMalCoreFunction(vec), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(vec), sizeof(MalType));
     append(symbol_list, "vec", 3);
 
-    append(function_pointers_list, NewMalCoreFunction(concat), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(concat), sizeof(MalType));
     append(symbol_list, "concat", 6);
 
-    append(function_pointers_list, NewMalCoreFunction(cons), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(cons), sizeof(MalType));
     append(symbol_list, "cons", 4);
 
-    append(function_pointers_list, NewMalCoreFunction(swap), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(swap), sizeof(MalType));
     append(symbol_list, "swap!", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(reset), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(reset), sizeof(MalType));
     append(symbol_list, "reset!", 6);
 
-    append(function_pointers_list, NewMalCoreFunction(deref), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(deref), sizeof(MalType));
     append(symbol_list, "deref", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(atom_question_mark),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(atom_question_mark), sizeof(MalType));
     append(symbol_list, "atom?", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(atom), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(atom), sizeof(MalType));
     append(symbol_list, "atom", 4);
 
-    append(function_pointers_list, NewMalCoreFunction(slurp), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(slurp), sizeof(MalType));
     append(symbol_list, "slurp", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(readstring),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(readstring), sizeof(MalType));
     append(symbol_list, "read-string", 11);
 
-    append(function_pointers_list, NewMalCoreFunction(println),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(println), sizeof(MalType));
     append(symbol_list, "println", 7);
 
-    append(function_pointers_list, NewMalCoreFunction(str), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(str), sizeof(MalType));
     append(symbol_list, "str", 3);
 
-    append(function_pointers_list, NewMalCoreFunction(prn), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(prn), sizeof(MalType));
     append(symbol_list, "prn", 3);
 
-    append(function_pointers_list, NewMalCoreFunction(prstr), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(prstr), sizeof(MalType));
     append(symbol_list, "pr-str", 6);
 
-    append(function_pointers_list, NewMalCoreFunction(add), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(add), sizeof(MalType));
     append(symbol_list, "+", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(sub), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(sub), sizeof(MalType));
     append(symbol_list, "-", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(mult), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(mult), sizeof(MalType));
     append(symbol_list, "*", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(divide), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(divide), sizeof(MalType));
     append(symbol_list, "/", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(prn), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(prn), sizeof(MalType));
     append(symbol_list, "prn", 3);
 
-    append(function_pointers_list, NewMalCoreFunction(list), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(list), sizeof(MalType));
     append(symbol_list, "list", 4);
 
-    append(function_pointers_list, NewMalCoreFunction(list_question_mark),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(list_question_mark), sizeof(MalType));
     append(symbol_list, "list?", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(empty_question_mark),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(empty_question_mark), sizeof(MalType));
     append(symbol_list, "empty?", 6);
 
-    append(function_pointers_list, NewMalCoreFunction(count), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(count), sizeof(MalType));
     append(symbol_list, "count", 5);
 
-    append(function_pointers_list, NewMalCoreFunction(equal), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(equal), sizeof(MalType));
     append(symbol_list, "=", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(less), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(less), sizeof(MalType));
     append(symbol_list, "<", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(more), sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(more), sizeof(MalType));
     append(symbol_list, ">", 1);
 
-    append(function_pointers_list, NewMalCoreFunction(equal_less),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(equal_less), sizeof(MalType));
     append(symbol_list, "<=", 2);
 
-    append(function_pointers_list, NewMalCoreFunction(equal_more),
-           sizeof(MalType));
+    append(fn_ptr_list, NewMalCoreFn(equal_more), sizeof(MalType));
     append(symbol_list, ">=", 2);
 
-    while (symbol_list != NULL && function_pointers_list != NULL) {
-        set(env, NewMalSymbol(symbol_list->data), function_pointers_list->data);
+    while (symbol_list != NULL && fn_ptr_list != NULL) {
+        set(env, NewMalSymbol(symbol_list->data), fn_ptr_list->data);
 
-        symbol_list            = symbol_list->next;
-        function_pointers_list = function_pointers_list->next;
+        symbol_list = symbol_list->next;
+        fn_ptr_list = fn_ptr_list->next;
     }
-    if ((symbol_list == NULL) ^ (function_pointers_list == NULL)) {
+    if ((symbol_list == NULL) ^ (fn_ptr_list == NULL)) {
         fprintf(stderr, "symbol_list and function_poiters_list are different "
                         "lenght, some have been discarded\n");
     }

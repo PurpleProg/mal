@@ -1,10 +1,10 @@
 CFLAGS = -Wall -g -Wextra -pedantic -O1
-SRCS = step8_macros.c types.c core.c reader.c linked_list.c printer.c hashmap.c env.c
+SRCS = step9_try.c types.c core.c reader.c linked_list.c printer.c hashmap.c env.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONNY: all clean
 
-all: step8_macros
+all: step9_try
 
 clean:
 	rm -f $(OBJS)
@@ -35,6 +35,9 @@ step7_quote: $(OBJS)
 	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
 
 step8_macros: $(OBJS)
+	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
+
+step9_try: $(OBJS)
 	gcc $(CFLAGS) $(OBJS) -o $@ -lpcre -lgc
 
 %.o: %.c

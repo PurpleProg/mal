@@ -103,7 +103,7 @@ MalType *NewMalTrue();
 MalType *NewMalFalse();
 MalType *NewMalNIL();
 MalType *NewMalAtom(MalType *MalObject);
-MalType *NewMalCoreFunction(MalCoreFn func);
+MalType *NewMalCoreFn(MalCoreFn func);
 
 int IsListOrVector(MalType *AST);
 int IsSymbol(MalType *AST);

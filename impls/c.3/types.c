@@ -74,7 +74,7 @@ MalType *NewMalAtom(MalType *MalObject) {
     result->value.AtomValue = MalObject;
     return result;
 }
-MalType *NewMalCoreFunction(MalCoreFn func) {
+MalType *NewMalCoreFn(MalCoreFn func) {
     MalType *result           = GC_MALLOC(sizeof(MalType));
     result->type              = MAL_CORE_FN;
     result->value.CoreFnValue = func;

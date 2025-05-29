@@ -74,10 +74,39 @@ MalType *NewMalAtom(MalType *MalObject) {
     result->value.AtomValue = MalObject;
     return result;
 }
-MalType *NewMalCoreFn(MalCoreFn func) {
+MalType *NewMalFnWrapper(MalType *parameters, MalType *body, env_t *env) {
+    if (!IsListOrVector(parameters)) {
+        printf("args whould be a list or a vector\n");
+        printf("returning NULL\n");
+        // TODO: raise error
+        return NULL;
+    }
+
+    MalFn *mal_function = GC_MALLOC(sizeof(MalFn));
+
+    mal_function->param = parameters;
+    mal_function->body  = body;
+    mal_function->env   = env;
+
+    // wrap function in MalFnWrapper
+    MalFnWrapper *mal_fn_wrapper = GC_MALLOC(sizeof(MalFnWrapper));
+    mal_fn_wrapper->ast          = body;
+    mal_fn_wrapper->param        = parameters;
+    mal_fn_wrapper->env          = env;
+    mal_fn_wrapper->fn           = mal_function;
+    mal_fn_wrapper->is_macro     = 0;
+
+    // wrap MalFnWrapper in MalType
+    MalType *mal_type_function             = GC_MALLOC(sizeof(MalType));
+    mal_type_function->type                = MAL_FN_WRAPER;
+    mal_type_function->value.FnWraperValue = mal_fn_wrapper;
+
+    return mal_type_function;
+}
+MalType *NewMalCoreFn(MalType *(*function)(MalList *)) {
     MalType *result           = GC_MALLOC(sizeof(MalType));
     result->type              = MAL_CORE_FN;
-    result->value.CoreFnValue = func;
+    result->value.CoreFnValue = function;
     return result;
 }
 
@@ -170,9 +199,13 @@ int IsHashmap(MalType *AST) {
 }
 
 MalList *GetList(MalType *AST) {
+    printf("getting list\n");
     if (!IsListOrVector(AST)) {
         printf("GetList arg is not a list nor a vector\n");
         return NULL;
+    }
+    if (AST->value.ListValue->data == NULL) {
+        printf("returning empty list\n");
     }
     return AST->value.ListValue;
 }
@@ -203,7 +236,7 @@ MalString *GetString(MalType *AST) {
 }
 MalCoreFn GetCoreFn(MalType *AST) {
     if (!IsCoreFn(AST)) {
-        printf("GetCoreFn arg is not CoreFn\n");
+        printf("GetCoreFn arg is not a CoreFn\n");
     }
     return AST->value.CoreFnValue;
 }
@@ -213,7 +246,7 @@ MalFn *GetFn(MalType *AST) {
     }
     return AST->value.FnValue;
 }
-MalFnWraper *GetFnWrapper(MalType *AST) {
+MalFnWrapper *GetFnWrapper(MalType *AST) {
     if (!IsFnWrapper(AST)) {
         printf("GetFnWraper arg is not FnWraper\n");
     }

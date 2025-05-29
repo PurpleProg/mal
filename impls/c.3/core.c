@@ -376,7 +376,7 @@ MalType *concat(node_t *node) {
     }
 
     // node is a list of lists, a list of args to concat
-    while (node != NULL && node->data != NULL) {
+    while (!is_empty(node)) {
         MalType *list      = node->data;
         MalList *list_node = GetList(list);
         if (!IsListOrVector(list)) {
@@ -685,35 +685,46 @@ MalType *apply(MalList *node) {
         return NewMalNIL();
     }
 
-    MalType *function = node->data;
-    // get the last arg
-    MalList *node_copy = node;
-    while (node_copy->next != NULL) {
-        node_copy = node_copy->next;
-    }
-    MalType *last_arg = node_copy->data;
+    MalType *function   = node->data;
+    MalList *apply_args = node->next;
 
-    if (!IsFnWrapper(function) && !IsCoreFn(function)) {
+    // concat args
+    MalList *args = GC_MALLOC(sizeof(MalList));
+    while (apply_args != NULL) {
+        if (IsListOrVector(apply_args->data)) {
+            // concat
+            MalList *sublist = GetList(apply_args->data);
+            while (!is_empty(sublist)) {
+                append(args, sublist->data, sizeof(MalType));
+                sublist = sublist->next;
+            }
+
+        } else {
+            append(args, apply_args->data, sizeof(MalType));
+        }
+        apply_args = apply_args->next;
+    }
+
+    switch (function->type) {
+    case MAL_CORE_FN: {
+        return GetCoreFn(function)(args);
+    }
+    case MAL_FN_WRAPER: {
+        MalList *result = GC_MALLOC(sizeof(MalList));
+        append(result, function, sizeof(MalType));
+        while (!is_empty(args)) {
+            append(result, args->data, sizeof(MalType));
+            args = args->next;
+        }
+
+        return EVAL(NewMalList(result), GetFnWrapper(function)->env);
+    }
+    default: {
         printf("aply must take a function as arg1\n");
         // TODO: raise error
         return NewMalNIL();
     }
-    if (!IsListOrVector(last_arg)) {
-        printf("aply must take a list or vector as arg2\n");
-        // TODO: raise error
-        return NewMalNIL();
     }
-
-    MalList *result = GC_MALLOC(sizeof(MalList));
-    append(result, function, sizeof(MalType));
-
-    MalList *list = GetList(last_arg);
-    while (list != NULL) {
-        append(result, list->data, sizeof(MalType));
-        list = list->next;
-    }
-
-    return NewMalList(result);
 }
 
 // comparators

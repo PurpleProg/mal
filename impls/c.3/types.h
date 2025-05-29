@@ -41,26 +41,26 @@ typedef int                MalFalse;
 typedef int                MalNil;
 typedef map_t              MalHashmap;
 typedef struct MalFn       MalFn;
-typedef struct MalFnWraper MalFnWraper;
-typedef MalType *(*MalCoreFn)(node_t *);
+typedef struct MalFnWraper MalFnWrapper;
+typedef MalType *(*MalCoreFn)(MalList *);
 
 // MAL_VECTOR use ListValue
 // MAL_KEYWORD use SybolValue
 // string and symbol could also share the same underlying type, but no.
 typedef union MalTypeValue {
-    MalInt      *IntValue;
-    MalSymbol   *SymbolValue;
-    MalList     *ListValue;
-    MalCoreFn    CoreFnValue;
-    MalFn       *FnValue;
-    MalFnWraper *FnWraperValue;
-    MalTrue     *TrueValue;
-    MalFalse    *FalseValue;
-    MalNil      *NilValue;
-    MalString   *StringValue;
-    MalType     *AtomValue;
-    MalHashmap  *HashmapValue;
-    MalKeyword  *KeywordValue;
+    MalInt       *IntValue;
+    MalSymbol    *SymbolValue;
+    MalList      *ListValue;
+    MalCoreFn     CoreFnValue;
+    MalFn        *FnValue;
+    MalFnWrapper *FnWraperValue;
+    MalTrue      *TrueValue;
+    MalFalse     *FalseValue;
+    MalNil       *NilValue;
+    MalString    *StringValue;
+    MalType      *AtomValue;
+    MalHashmap   *HashmapValue;
+    MalKeyword   *KeywordValue;
 } MalTypeValue;
 
 struct MalType {
@@ -103,7 +103,8 @@ MalType *NewMalTrue();
 MalType *NewMalFalse();
 MalType *NewMalNIL();
 MalType *NewMalAtom(MalType *MalObject);
-MalType *NewMalCoreFn(MalCoreFn func);
+MalType *NewMalCoreFn(MalType *(*function)(MalList *));
+MalType *NewMalFnWrapper(MalType *parameters, MalType *body, env_t *env);
 
 int IsListOrVector(MalType *AST);
 int IsSymbol(MalType *AST);
@@ -121,17 +122,17 @@ int IsKeyword(MalType *AST);
 int IsAtom(MalType *AST);
 int IsHashmap(MalType *AST);
 
-MalList     *GetList(MalType *AST);
-MalSymbol   *GetSymbol(MalType *AST);
-MalInt      *GetInt(MalType *AST);
-MalList     *GetList(MalType *AST);
-MalList     *GetVector(MalType *AST);
-MalString   *GetString(MalType *AST);
-MalCoreFn    GetCoreFn(MalType *AST);
-MalFn       *GetFn(MalType *AST);
-MalFnWraper *GetFnWrapper(MalType *AST);
-MalKeyword  *GetKeyword(MalType *AST);
-MalType     *GetAtom(MalType *AST);
-MalHashmap  *GetHashmap(MalType *AST);
+MalList      *GetList(MalType *AST);
+MalSymbol    *GetSymbol(MalType *AST);
+MalInt       *GetInt(MalType *AST);
+MalList      *GetList(MalType *AST);
+MalList      *GetVector(MalType *AST);
+MalString    *GetString(MalType *AST);
+MalCoreFn     GetCoreFn(MalType *AST);
+MalFn        *GetFn(MalType *AST);
+MalFnWrapper *GetFnWrapper(MalType *AST);
+MalKeyword   *GetKeyword(MalType *AST);
+MalType      *GetAtom(MalType *AST);
+MalHashmap   *GetHashmap(MalType *AST);
 
 #endif

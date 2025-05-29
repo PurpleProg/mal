@@ -327,11 +327,6 @@ MalType *EVAL(MalType *AST, env_t *env) {
                         }
                         binding = binding->next->next;
                     }
-                    printf("let ret\n");
-                    printf("going to eval %s\n",
-                           pr_str(element->next->next->data, 0));
-                    printf("in enc %s\n", pr_env(new_env));
-                    return EVAL(element->next->next->data, new_env);
 
                     // TCO
                     env = new_env;
@@ -382,48 +377,25 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 }
                 // fn*
                 if (strcmp(symbol, "fn*") == 0) {
-                    if (element->next == NULL) {
+                    if (is_empty(element->next)) {
                         printf("fn shall take at least one arg");
+                        // TODO: raise error
                         return NewMalNIL();
                     }
                     if (!IsListOrVector(element->next->data)) {
                         printf("fn parameters should be a list or a vector\n");
+                        // TODO: raise error
                         return NewMalNIL();
                     }
                     if (element->next == NULL) {
                         printf("fn dont have a body rn :/ \n");
+                        // TODO: raise error
                         return NewMalNIL();
                     }
 
-                    // create the function
-                    MalFn   *function   = GC_MALLOC(sizeof(MalFn));
                     MalType *parameters = element->next->data;
                     MalType *body       = element->next->next->data;
-
-                    if (!IsListOrVector(parameters)) {
-                        printf("args whould be a list or a vector\n");
-                        return AST;
-                    }
-
-                    // function->param = formated_parameters;
-                    function->param = parameters;
-                    function->body  = body;
-                    function->env   = env;
-
-                    // wrap funtion for TCO
-                    MalFnWraper *fnwraper = GC_MALLOC(sizeof(MalFnWraper));
-                    fnwraper->ast         = element->next->next->data; // body
-                    fnwraper->param       = element->next->data;
-                    fnwraper->env         = env;
-                    fnwraper->fn          = function;
-                    fnwraper->is_macro    = 0;
-
-                    // wrap function in MalType
-                    MalType *mal_type_function = GC_MALLOC(sizeof(MalType));
-                    mal_type_function->type    = MAL_FN_WRAPER;
-                    mal_type_function->value.FnWraperValue = fnwraper;
-
-                    return mal_type_function;
+                    return NewMalFnWrapper(parameters, body, env);
                 }
                 // quote
                 if (strcmp(symbol, "quote") == 0) {
@@ -482,7 +454,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 int do_eval_macro =
                     GetFnWrapper(evaluated_first_element)->is_macro;
 
-                MalFnWraper *f = GetFnWrapper(evaluated_first_element);
+                MalFnWrapper *f = GetFnWrapper(evaluated_first_element);
 
                 // skip evaluated first element;
                 node_t *unevaluated_args = element->next;

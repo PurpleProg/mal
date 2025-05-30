@@ -199,13 +199,9 @@ int IsHashmap(MalType *AST) {
 }
 
 MalList *GetList(MalType *AST) {
-    printf("getting list\n");
     if (!IsListOrVector(AST)) {
         printf("GetList arg is not a list nor a vector\n");
         return NULL;
-    }
-    if (AST->value.ListValue->data == NULL) {
-        printf("returning empty list\n");
     }
     return AST->value.ListValue;
 }

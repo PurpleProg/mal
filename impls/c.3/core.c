@@ -675,12 +675,12 @@ MalType *apply(MalList *node) {
     ** with arguments that are contained in a list (or vector).
     */
     if (is_empty(node)) {
-        printf("= with no arg \n");
+        printf("apply with no arg \n");
         // TODO: raise error
         return NewMalNIL();
     }
     if (is_empty(node->next)) {
-        printf("= with only one arg\n");
+        printf("apply with only one arg\n");
         // TODO: raise error
         return NewMalNIL();
     }
@@ -725,6 +725,60 @@ MalType *apply(MalList *node) {
         return NewMalNIL();
     }
     }
+}
+MalType *map(MalList *node) {
+    /*
+    ** takes a function
+    ** and a list (or vector)
+    ** and evaluates the function against
+    ** every element of the list (or vector)
+    ** one at a time
+    ** and returns the results as a list
+    */
+    if (is_empty(node)) {
+        printf("map with no arg \n");
+        // TODO: raise error
+        return NewMalNIL();
+    }
+    if (is_empty(node->next)) {
+        printf("map with only one arg\n");
+        // TODO: raise error
+        return NewMalNIL();
+    }
+
+    MalList *result = GC_MALLOC(sizeof(MalList));
+
+    MalType *function = node->data;
+    MalType *map_args = node->next->data;
+    printf("map args: %s\n", pr_str(map_args, 0));
+
+    if (!IsCoreFn(function) && !IsFnWrapper(function)) {
+        printf("map must take a function as arg 2\n");
+        // TODO: raise error
+        return NewMalList(result);
+    }
+    if (!IsListOrVector(map_args)) {
+        printf("map must take a list or vector as arg 2\n");
+        // TODO: raise error
+        return NewMalList(result);
+    }
+
+    MalList *list_args = GetList(map_args);
+    while (!is_empty(list_args)) {
+        // append result apply(function, list_args->data)
+        MalList *apply_call_args = GC_MALLOC(sizeof(MalList));
+        append(apply_call_args, function, sizeof(MalType));
+        append(apply_call_args, list_args->data, sizeof(MalType));
+
+        MalType *apply_ret = apply(apply_call_args);
+        printf("apply ret : %s\n", pr_str(apply_ret, 0));
+
+        append(result, apply_ret, sizeof(MalType));
+
+        list_args = list_args->next;
+    }
+
+    return NewMalList(result);
 }
 
 // comparators
@@ -1068,6 +1122,9 @@ env_t *create_repl() {
 
     // yes, hard coded.
     // why :'(
+    append(fn_ptr_list, NewMalCoreFn(map), sizeof(MalType));
+    append(symbol_list, "map", 3);
+
     append(fn_ptr_list, NewMalCoreFn(apply), sizeof(MalType));
     append(symbol_list, "apply", 5);
 

@@ -440,6 +440,7 @@ MalType *nth(node_t *node) {
         list = list->next;
         if (is_empty(list)) {
             printf("nth index out of range\n");
+            global_error = NewMalList(node);
             return nil;
         }
     }

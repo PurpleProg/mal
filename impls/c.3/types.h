@@ -6,6 +6,9 @@
 // MalType
 typedef struct MalType MalType;
 
+// make it global
+extern MalType *global_error;
+
 typedef node_t map_t;
 
 int   map_set(map_t *map, MalType *key, MalType *value);

@@ -15,6 +15,9 @@ char    *PRINT(MalType *AST);
 char    *rep(char *line, env_t *env);
 
 env_t *repl_env;
+// define the global error declared in type.h
+// (so that it's global cause type.h is inclued everywere)
+MalType *global_error = NULL;
 
 // TODO:
 // fix def! assignement on error -> shouldn assigne, but does
@@ -30,7 +33,8 @@ int main(int argc, char *argv[]) {
     size_t  len  = 0;
     ssize_t read;
 
-    repl_env = create_repl();
+    repl_env     = create_repl();
+    global_error = NULL;
 
     // add eval to the repl
     set(repl_env, NewMalString("eval"), NewMalCoreFn(eval));
@@ -209,6 +213,8 @@ MalType *READ(char *line) {
 
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
+        // reset
+        global_error = NULL;
 
         MalType *do_contain_debug_eval = get(env, NewMalSymbol("DEBUG-EVAL"));
         if (do_contain_debug_eval != NULL) {
@@ -271,16 +277,23 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 // def!
                 if (strcmp(symbol, "def!") == 0) {
                     if (element->next == NULL) {
-                        printf("def! shall take two args");
+                        printf("def! shall take two args\n");
+                        global_error = AST;
                         return AST;
                     }
                     if (element->next->next == NULL) {
-                        printf("def! shall take two args");
+                        printf("def! shall take two args\n");
+                        global_error = AST;
                         return AST;
                     }
                     MalType *key   = element->next->data;
                     MalType *value = EVAL(element->next->next->data, env);
-                    // TODO: check if EVAL returned an error
+
+                    if (global_error != NULL) {
+                        printf("def! value error\n");
+                        return AST;
+                    }
+
                     if (value != NULL) {
                         set(env, key, value);
                     }
@@ -662,6 +675,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
         }
 
         fprintf(stderr, "unmatched AST\n");
+        global_error = AST;
         return NULL;
     }
 }

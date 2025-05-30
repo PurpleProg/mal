@@ -22,6 +22,7 @@ MalType *add(node_t *node) {
         MalType *integer = node->data;
         if (!IsInt(integer)) {
             printf("add arg is not int\n");
+            global_error = NewMalList(node);
             break;
         }
         result += *GetInt(integer);
@@ -38,8 +39,9 @@ MalType *sub(node_t *node) {
 
     MalInt result = 0;
 
-    if (node == NULL) {
+    if (is_empty(node) || is_empty(node->next)) {
         fprintf(stderr, "at least two number pls\n");
+        global_error = NewMalList(node);
         return 0;
     }
 
@@ -73,9 +75,11 @@ MalType *divide(node_t *node) {
 
     if (node->next == NULL) {
         printf("divide must take two arg (not 0)");
+        global_error = NewMalList(node);
         return 0;
     } else if (node->next == NULL) {
         printf("divide must take two arg (not 1)");
+        global_error = NewMalList(node);
         return 0;
     } // else if (node->next->next->next != NULL) {
 
@@ -195,6 +199,7 @@ MalType *println(node_t *node) {
 MalType *readstring(node_t *node) {
     if (!IsString(node->data)) {
         printf("read-string arg is not a string\n");
+        global_error = NewMalList(node);
         return NULL;
     }
     char *string = GetString(node->data);
@@ -207,6 +212,7 @@ MalType *slurp(node_t *node) {
     // unpack the filename
     if (!IsString(node->data)) {
         printf("slurp arg should be a string\n");
+        global_error = NewMalList(node);
         return NULL;
     }
     char *filename = GetString(node->data);
@@ -273,6 +279,7 @@ MalType *vec(node_t *node) {
     if (!IsListOrVector(arg)) {
         // TODO: raise an error
         printf("vec take a list or a vector as arg\n");
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
 
@@ -293,6 +300,7 @@ MalType *empty_question_mark(node_t *node) {
     }
     if (!(IsListOrVector(node->data))) {
         printf("arg is not a list\n");
+        global_error = NewMalList(node);
         return NewMalFalse();
     }
     MalList *list = GetList(node->data);
@@ -334,15 +342,18 @@ MalType *cons(node_t *node) {
     MalType *ret      = NewMalList(new_list);
     if (node == NULL) {
         printf("cons need args");
+        global_error = NewMalList(node);
         return ret;
     }
     if (node->next == NULL) {
         printf("cons without list");
+        global_error = NewMalList(node);
         return ret;
     }
     if (node->next->data == NULL) {
         // allocate a new_list, this one is empty
         printf("node->next->data is NULL");
+        global_error = NewMalList(node);
         return ret;
     }
 
@@ -366,13 +377,8 @@ MalType *concat(node_t *node) {
     node_t  *new_list = GC_MALLOC(sizeof(node_t));
     MalType *ret      = NewMalList(new_list);
 
-    if (node == NULL) {
-        printf("concat need args\n");
-        return ret;
-    }
-    if (node->data == NULL) {
+    if (is_empty(node)) {
         printf("concat arg1 is NULL\n");
-        return ret;
     }
 
     // node is a list of lists, a list of args to concat
@@ -381,6 +387,7 @@ MalType *concat(node_t *node) {
         MalList *list_node = GetList(list);
         if (!IsListOrVector(list)) {
             printf("concat arg in not list nor vector\n");
+            global_error = NewMalList(node);
             // skipping...
             node = node->next;
             continue;
@@ -400,18 +407,22 @@ MalType *nth(node_t *node) {
 
     if (node == NULL) {
         printf("nth need args");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->data == NULL) {
         printf("nth args1 is empty list");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next == NULL) {
         printf("nth without indice");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next->data == NULL) {
         printf("nth node->next->data is NULL");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -419,6 +430,7 @@ MalType *nth(node_t *node) {
     MalType *arg1 = node->data;
     if (!IsListOrVector(arg1)) {
         printf("nth arg1 must be a list or a vector\n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -426,6 +438,7 @@ MalType *nth(node_t *node) {
     MalType *arg2 = node->next->data;
     if (!IsInt(arg2)) {
         printf("nth arg2 must be a int\n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -433,6 +446,7 @@ MalType *nth(node_t *node) {
     int      target_index = *GetInt(arg2);
     if (target_index < 0) {
         printf("index < 0\n");
+        global_error = NewMalList(node);
         return nil;
     }
     for (int i = 0; i < target_index; i++) {
@@ -462,10 +476,12 @@ MalType *rest(node_t *node) {
     MalType *arg = node->data;
     if (arg == NULL) {
         printf("rest takes an arg\n");
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
     if (!IsListOrVector(arg)) {
         printf("rest arg must be a list or a vecotr\n");
+        global_error = NewMalList(node);
         // empty list
         return NewMalList(GC_MALLOC(sizeof(node_t)));
     }
@@ -491,10 +507,12 @@ MalType *equal(MalList *node) {
 
     if (is_empty(node)) {
         printf("= with no arg \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (is_empty(node->next)) {
         printf("= with only one arg\n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -604,9 +622,11 @@ MalType *equal(MalList *node) {
         // param is a MalType->list of MalType->Symbol
         if (!IsListOrVector(fn1->param)) {
             printf("equal : fn1->param is not a list\n");
+            global_error = NewMalList(node);
         }
         if (!IsListOrVector(fn2->param)) {
             printf("equal : fn2->param is not a list\n");
+            global_error = NewMalList(node);
         }
         node_t *symbol_list_1 = GetList(fn1->param);
         node_t *symbol_list_2 = GetList(fn2->param);
@@ -656,6 +676,7 @@ MalType *equal(MalList *node) {
     }
 
     printf("= fallback\n");
+    global_error = NewMalList(node);
     return false;
 }
 MalType *apply(MalList *node) {
@@ -677,12 +698,12 @@ MalType *apply(MalList *node) {
     */
     if (is_empty(node)) {
         printf("apply with no arg \n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
     if (is_empty(node->next)) {
         printf("apply with only one arg\n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
 
@@ -722,7 +743,7 @@ MalType *apply(MalList *node) {
     }
     default: {
         printf("aply must take a function as arg1\n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
     }
@@ -738,12 +759,12 @@ MalType *map(MalList *node) {
     */
     if (is_empty(node)) {
         printf("map with no arg \n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
     if (is_empty(node->next)) {
         printf("map with only one arg\n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
 
@@ -751,16 +772,15 @@ MalType *map(MalList *node) {
 
     MalType *function = node->data;
     MalType *map_args = node->next->data;
-    printf("map args: %s\n", pr_str(map_args, 0));
 
     if (!IsCoreFn(function) && !IsFnWrapper(function)) {
         printf("map must take a function as arg 2\n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalList(result);
     }
     if (!IsListOrVector(map_args)) {
         printf("map must take a list or vector as arg 2\n");
-        // TODO: raise error
+        global_error = NewMalList(node);
         return NewMalList(result);
     }
 
@@ -772,7 +792,6 @@ MalType *map(MalList *node) {
         append(apply_call_args, list_args->data, sizeof(MalType));
 
         MalType *apply_ret = apply(apply_call_args);
-        printf("apply ret : %s\n", pr_str(apply_ret, 0));
 
         append(result, apply_ret, sizeof(MalType));
 
@@ -790,18 +809,22 @@ MalType *less(node_t *node) {
 
     if (node == NULL) {
         printf("< with no arg \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->data == NULL) {
         printf("< arg1 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next == NULL) {
         printf("< with only one arg\n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next->data == NULL) {
         printf("< arg2 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -813,6 +836,7 @@ MalType *less(node_t *node) {
 
     if (!IsInt(arg1) || !IsInt(arg2)) {
         printf("< with non int parameters\n");
+        global_error = NewMalList(node);
         return NULL;
     }
     if (*GetInt(arg1) < *GetInt(arg2)) {
@@ -827,18 +851,22 @@ MalType *more(node_t *node) {
 
     if (node == NULL) {
         printf("> with no arg \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->data == NULL) {
         printf("> arg1 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next == NULL) {
         printf("> with only one arg\n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next->data == NULL) {
         printf("> arg2 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -850,6 +878,7 @@ MalType *more(node_t *node) {
 
     if (!IsInt(arg1) || !IsInt(arg2)) {
         printf("> with non int parameters\n");
+        global_error = NewMalList(node);
         return NULL;
     }
     if (*GetInt(arg1) > *GetInt(arg2)) {
@@ -864,18 +893,22 @@ MalType *equal_less(node_t *node) {
 
     if (node == NULL) {
         printf("<= with no arg \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->data == NULL) {
         printf("<= arg1 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next == NULL) {
         printf("<= with only one arg\n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next->data == NULL) {
         printf("<= arg2 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -887,6 +920,7 @@ MalType *equal_less(node_t *node) {
 
     if (!IsInt(arg1) || !IsInt(arg2)) {
         printf("<= with non int parameters\n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (*GetInt(arg1) <= *GetInt(arg2)) {
@@ -901,18 +935,22 @@ MalType *equal_more(node_t *node) {
 
     if (node == NULL) {
         printf(">= with no arg \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->data == NULL) {
         printf(">= arg1 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next == NULL) {
         printf(">= with only one arg\n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (node->next->data == NULL) {
         printf(">= arg2 is NULL \n");
+        global_error = NewMalList(node);
         return nil;
     }
 
@@ -924,6 +962,7 @@ MalType *equal_more(node_t *node) {
 
     if (!IsInt(arg1) || !IsInt(arg2)) {
         printf(">= with non int parameters\n");
+        global_error = NewMalList(node);
         return nil;
     }
     if (*GetInt(arg1) >= *GetInt(arg2)) {
@@ -936,6 +975,7 @@ MalType *equal_more(node_t *node) {
 MalType *atom(node_t *node) {
     if (node->data == NULL) {
         printf("atom must take an arg \n");
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
     return NewMalAtom(node->data);
@@ -958,6 +998,7 @@ MalType *deref(node_t *node) {
     MalType *atom = node->data;
     if (!IsAtom(atom)) {
         printf("deref arg is not an atom\n");
+        global_error = NewMalList(node);
         return node->data;
     }
     return GetAtom(atom);
@@ -966,10 +1007,12 @@ MalType *reset(node_t *node) {
     MalType *atom = node->data;
     if (!IsAtom(atom)) {
         printf("reset arg1 is not an atom\n");
+        global_error = NewMalList(node);
         return node->data;
     }
     if (node->next == NULL) {
         printf("reset take two arg\n");
+        global_error = NewMalList(node);
         return NewMalNIL();
     }
     memcpy(GetAtom(atom), node->next->data, sizeof(MalType));
@@ -981,10 +1024,12 @@ MalType *swap(node_t *node) {
     MalType *atom = node->data;
     if (!IsAtom(atom)) {
         printf("swap arg1 is not an atom\n");
+        global_error = NewMalList(node);
         return node->data;
     }
-    if (node->next == NULL) {
+    if (is_empty(node->next)) {
         printf("swap take two arg\n");
+        global_error = NewMalList(node);
         return nil;
     }
     MalType *fn = node->next->data;
@@ -1005,8 +1050,8 @@ MalType *swap(node_t *node) {
 
     MalType *ret;
     if (IsCoreFn(fn)) {
-        // TODO: creating a new repl is not very optimal
-        ret = EVAL(NewMalList(list), create_repl());
+        // skip core fn
+        ret = GetCoreFn(fn)(list->next);
     } else {
         ret = EVAL(NewMalList(list), GetFnWrapper(fn)->env);
     }
@@ -1267,6 +1312,7 @@ env_t *create_repl() {
     if ((symbol_list == NULL) ^ (fn_ptr_list == NULL)) {
         fprintf(stderr, "symbol_list and function_poiters_list are different "
                         "lenght, some have been discarded\n");
+        global_error = NewMalSymbol("create_repl error\n");
     }
 
     return env;

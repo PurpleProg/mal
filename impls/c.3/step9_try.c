@@ -175,6 +175,7 @@ MalType *quasiquote(MalType *AST, env_t *env) {
             if (strcmp(GetSymbol(first_element), "unquote") == 0) {
                 if (list->next == NULL) {
                     printf("unquoting nothing :/\n");
+                    global_error = AST;
                     return NewMalNIL();
                 }
                 // return the second element
@@ -268,6 +269,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
             MalType *first_element = element->data;
             if (first_element == NULL) {
                 printf("first element is NULL\n");
+                global_error = AST;
                 return AST;
             }
 
@@ -303,10 +305,12 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (strcmp(symbol, "let*") == 0) {
                     if (element->next == NULL) {
                         printf("let* shall take two args");
+                        global_error = AST;
                         return AST;
                     }
                     if (element->next->next == NULL) {
                         printf("let* shall take two args");
+                        global_error = AST;
                         return AST;
                     }
 
@@ -322,6 +326,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                         bindings_list = GetList(element->next->data);
                     } else {
                         printf("let* takes a list or a vector as arg :/\n");
+                        global_error = AST;
                         return AST;
                     }
 
@@ -330,11 +335,16 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     while (binding != NULL) {
                         if (binding->next == NULL) {
                             printf("binding list is odd\n");
+                            global_error = AST;
                             return AST;
                         }
 
                         MalType *key   = binding->data;
                         MalType *value = EVAL(binding->next->data, new_env);
+                        if (global_error != NULL) {
+                            printf("let* value error\n");
+                            return value;
+                        }
                         if (value != NULL) {
                             set(new_env, key, value);
                         }
@@ -350,6 +360,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (strcmp(symbol, "do") == 0) {
                     if (element->next == NULL) {
                         printf("do shall take at least one arg");
+                        global_error = AST;
                         return AST;
                     }
 
@@ -359,6 +370,10 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     // evaluate each element
                     while (element->next != NULL) {
                         EVAL(element->data, env);
+                        // if (global_error != NULL) {
+                        //     printf("do eval element failed\n");
+                        //     return AST;
+                        // }
                         element = element->next;
                     };
 
@@ -369,9 +384,16 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (strcmp(symbol, "if") == 0) {
                     if (element->next == NULL) {
                         printf("if shall take at least one arg");
+                        global_error = AST;
                         return NewMalNIL();
                     }
                     MalType *condition = EVAL(element->next->data, env);
+
+                    if (global_error != NULL) {
+                        printf("if condition must return a boolean value\n");
+                        return condition;
+                    }
+
                     if (IsFalse(condition) || IsNil(condition)) {
                         // condition is false
                         if (element->next->next->next == NULL) {
@@ -383,6 +405,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     // condition was true
                     if (element->next->next == NULL) {
                         printf("if without body\n");
+                        global_error = AST;
                         return NewMalNIL();
                     }
                     AST = element->next->next->data;
@@ -392,17 +415,17 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (strcmp(symbol, "fn*") == 0) {
                     if (is_empty(element->next)) {
                         printf("fn shall take at least one arg");
-                        // TODO: raise error
+                        global_error = AST;
                         return NewMalNIL();
                     }
                     if (!IsListOrVector(element->next->data)) {
                         printf("fn parameters should be a list or a vector\n");
-                        // TODO: raise error
+                        global_error = AST;
                         return NewMalNIL();
                     }
                     if (element->next == NULL) {
                         printf("fn dont have a body rn :/ \n");
-                        // TODO: raise error
+                        global_error = AST;
                         return NewMalNIL();
                     }
 
@@ -431,20 +454,30 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (strcmp(symbol, "defmacro!") == 0) {
                     if (element->next == NULL) {
                         printf("defmacro! shall take two args");
+                        global_error = AST;
                         return AST;
                     }
                     if (element->next->next == NULL) {
                         printf("defmacro! shall take two args");
+                        global_error = AST;
                         return AST;
                     }
                     MalType *key   = element->next->data;
                     MalType *value = EVAL(element->next->next->data, env);
+
+                    if (global_error != NULL) {
+                        printf("defmacro! value error\n");
+                        return value;
+                    }
+
                     if (value == NULL) {
                         printf("defmacro! eval arg returned NULL\n");
+                        global_error = AST;
                         return AST;
                     }
                     if (!IsFnWrapper(value)) {
                         printf("defmacro! arg must be a function\n");
+                        global_error = AST;
                         return AST;
                     }
 
@@ -458,8 +491,10 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
             // eval first element
             MalType *evaluated_first_element = EVAL(first_element, env);
-            if (evaluated_first_element == NULL) {
-                return AST;
+
+            if (global_error != NULL) {
+                printf("eval first elemtn failed\n");
+                return evaluated_first_element;
             }
 
             switch (evaluated_first_element->type) {
@@ -476,8 +511,13 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 if (!do_eval_macro) {
                     // eval args in current env
                     while (unevaluated_args != NULL) {
-                        MalType *arg = unevaluated_args->data;
-                        append(evaluated_args, EVAL(arg, env), sizeof(MalType));
+                        MalType *arg           = unevaluated_args->data;
+                        MalType *evaluated_arg = EVAL(arg, env);
+                        if (global_error != NULL) {
+                            printf("eval fn args failed\n");
+                            return evaluated_arg;
+                        }
+                        append(evaluated_args, evaluated_arg, sizeof(MalType));
                         unevaluated_args = unevaluated_args->next;
                     }
                 }
@@ -519,7 +559,6 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     }
                     // catch exprs empty
                     if (exprs->next == NULL && binds->next != NULL) {
-                        printf("expr is NULL\n");
                         char *bind = GetSymbol(binds->next->data);
                         if (strcmp(bind, "&") != 0) {
                             printf("not enough args passed to the function\n");
@@ -569,6 +608,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
                     if (new_env == NULL) {
                         printf("macro new_env is NULL\n");
+                        global_error = AST;
                     }
 
                     // create a copy of ast
@@ -590,11 +630,19 @@ MalType *EVAL(MalType *AST, env_t *env) {
                         func_body_copy->value.ListValue = list;
 
                         AST = EVAL(func_body_copy, new_env);
+                        if (global_error != NULL) {
+                            printf("eval function failed\n");
+                            return AST;
+                        }
                         continue;
                     } else {
                         // dont create a copy
                         func_body_copy = f->ast;
                         AST            = EVAL(func_body_copy, new_env);
+                        if (global_error != NULL) {
+                            printf("eval function failed\n");
+                            return AST;
+                        }
                         continue;
                     }
                 }
@@ -621,6 +669,10 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 // evaluate each element in the current list and add them
                 while (element != NULL) {
                     MalType *evaluated_element = EVAL(element->data, env);
+                    if (global_error != NULL) {
+                        printf("eval core fn args failed\n");
+                        return NewMalNIL();
+                    }
 
                     append(evaluated_list, (void *)evaluated_element,
                            sizeof(MalType));
@@ -640,6 +692,10 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 // evaluate each element in the current list and add them
                 while (element != NULL) {
                     MalType *evaluated_element = EVAL(element->data, env);
+                    if (global_error != NULL) {
+                        printf("list elt eval failed\n");
+                        return evaluated_element;
+                    }
                     if (evaluated_element != NULL) {
                         append(evaluated_list, (void *)evaluated_element,
                                sizeof(MalType));
@@ -664,7 +720,10 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
             while (hashmap != NULL) {
                 hashmap->data = EVAL(hashmap->data, env);
-                printf("evaluated hmap data : %s\n", pr_str(hashmap->data, 0));
+                if (global_error != NULL) {
+                    printf("hashmap eval failed (peobably value)");
+                    return hashmap->data;
+                }
                 hashmap = hashmap->next;
             };
             return AST;

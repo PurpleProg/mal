@@ -519,6 +519,8 @@ MalType *equal(MalList *node) {
     MalType *arg1 = node->data;
     MalType *arg2 = node->next->data;
 
+    int eval_hashmap = 0;
+
     if (arg1->type != arg2->type) {
         if (!(IsListOrVector(arg1) && IsListOrVector(arg2))) {
             return false;
@@ -529,11 +531,19 @@ MalType *equal(MalList *node) {
         // fallback to list equality
         // accesing ListValue instead of Hashmap value work here
         // because bolth are typedef of node_t
+        eval_hashmap = 1;
     case MAL_VECTOR:
         // fallback to list equality
     case MAL_LIST: {
-        MalList *node1 = GetList(arg1);
-        MalList *node2 = GetList(arg2);
+        MalList *node1;
+        MalList *node2;
+        if (eval_hashmap == 0) {
+            node1 = GetList(arg1);
+            node2 = GetList(arg2);
+        } else {
+            node1 = GetHashmap(arg1);
+            node2 = GetHashmap(arg2);
+        }
         while (node1 != NULL && node2 != NULL) {
             // if two elements are empty:
             if (node1->data == NULL && node2->data == NULL) {
@@ -1195,6 +1205,120 @@ MalType *hashmap(MalList *node) {
     return NewMalHashmap(hashmap);
 }
 
+// hash-map
+MalType *get_hashmap(MalList *node) {
+    if (is_empty(node)) {
+        printf("get without args\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalType *hashmap = node->data;
+    if (!IsHashmap(hashmap)) {
+        printf("get arg 1 must be hashmap\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+
+    if (is_empty(node->next)) {
+        printf("get without arg 2\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalType *key = node->next->data;
+    if (!IsString(key) && !IsKeyword(key)) {
+        printf("get arg 2 (key) must be a string or a keyword\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    char *key_string;
+    if (IsString(key)) {
+        key_string = GetString(key);
+    } else {
+        key_string = GetKeyword(key);
+    }
+
+    MalHashmap *hashmap_node = GetHashmap(hashmap);
+    while (hashmap_node != NULL) {
+        if (is_empty(hashmap_node->next)) {
+            printf("hashmap shouldnt be odd\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+
+        MalType *current_key = hashmap_node->data;
+        char    *current_key_string;
+        if (IsString(current_key)) {
+            current_key_string = GetString(current_key);
+        } else {
+            current_key_string = GetKeyword(current_key);
+        }
+
+        if (strcmp(key_string, current_key_string) == 0) {
+            // found
+            return hashmap_node->next->data;
+        }
+        hashmap_node = hashmap_node->next->next;
+    }
+    // no found
+    return NewMalNIL();
+}
+MalType *contains(MalList *node) {
+    if (is_empty(node)) {
+        printf("contains without args\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalType *hashmap = node->data;
+    if (!IsHashmap(hashmap)) {
+        printf("contains arg must be hashmap\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+
+    if (is_empty(node->next)) {
+        printf("contains without arg 2\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalType *key = node->next->data;
+    if (!IsString(key) && !IsKeyword(key)) {
+        printf("contains arg 2 (key) must be a string or a keyword\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    char *key_string;
+    if (IsString(key)) {
+        key_string = GetString(key);
+    } else {
+        key_string = GetKeyword(key);
+    }
+
+    MalHashmap *hashmap_node = GetHashmap(hashmap);
+    while (hashmap_node != NULL) {
+        if (is_empty(hashmap_node->next)) {
+            printf("hashmap shouldnt be odd\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+
+        MalType *current_key = hashmap_node->data;
+        char    *current_key_string;
+        if (IsString(current_key)) {
+            current_key_string = GetString(current_key);
+        } else {
+            current_key_string = GetKeyword(current_key);
+        }
+
+        if (strcmp(key_string, current_key_string) == 0) {
+            // found
+            return NewMalTrue();
+        }
+        hashmap_node = hashmap_node->next->next;
+    }
+    // not found
+    return NewMalNIL();
+}
+
 env_t *create_repl() {
 
     env_t *env = create_env(NULL, NULL, NULL);
@@ -1205,6 +1329,12 @@ env_t *create_repl() {
 
     // yes, hard coded.
     // why :'(
+    append(fn_ptr_list, NewMalCoreFn(contains), sizeof(MalType));
+    append(symbol_list, "contains?", 9);
+
+    append(fn_ptr_list, NewMalCoreFn(get_hashmap), sizeof(MalType));
+    append(symbol_list, "get", 3);
+
     append(fn_ptr_list, NewMalCoreFn(hashmap), sizeof(MalType));
     append(symbol_list, "hash-map", 8);
 

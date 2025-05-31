@@ -141,7 +141,6 @@ MalType *read_hashmap(reader_t *reader) {
         token = reader_next(reader);
     }
 
-    printf("hashmap : %s\n", pr_str(hashmap, 0));
     return hashmap;
 }
 MalType *read_list(reader_t *reader, int vector) {

@@ -1376,6 +1376,140 @@ MalType *vals(MalList *node) {
     }
     return NewMalList(vals);
 }
+MalType *assoc(MalList *node) {
+    /*
+    ** takes a hash-map as the first argument
+    ** and the remaining arguments are odd/even key/value pairs
+    ** to "associate" (merge) into the hash-map.
+    ** Note that the original hash-map is unchanged
+    ** (remember, mal values are immutable),
+    ** and a new hash-map containing
+    ** the old hash-maps key/values
+    ** plus the merged key/value arguments
+    ** is returned.
+    */
+    if (is_empty(node)) {
+        printf("assoc without args\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+
+    MalType *arg1 = node->data;
+    if (!IsHashmap(arg1)) {
+        printf("assoc arg must be hashmap\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalHashmap *hashmap = GetHashmap(arg1);
+
+    MalList *args = node->next;
+
+    // add the elt from the first hashmap
+    // to the new one
+    MalHashmap *new_hashmap = GC_MALLOC(sizeof(MalHashmap));
+    while (!is_empty(hashmap)) {
+        append(new_hashmap, hashmap->data, sizeof(MalType));
+        hashmap = hashmap->next;
+    }
+
+    // add the elts from the args to the new hashmap
+    while (args != NULL) {
+        MalType *elt = args->data;
+        append(new_hashmap, elt, sizeof(MalType));
+
+        args = args->next;
+    }
+    return NewMalHashmap(new_hashmap);
+}
+MalType *dissoc(MalList *node) {
+    /*
+    ** takes a hash-map
+    ** and a list of keys to remove from the hash-map.
+    ** Again, note that the original hash-map is unchanged
+    ** and a new hash-map with the keys removed is returned.
+    ** Key arguments that do not exist in the hash-map are ignored.
+    */
+    if (is_empty(node)) {
+        printf("dissoc without args\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+
+    MalType *arg1 = node->data;
+    if (!IsHashmap(arg1)) {
+        printf("dissoc arg must be hashmap\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalHashmap *hashmap = GetHashmap(arg1);
+
+    if (is_empty(node->next)) {
+        printf("dissoc without arg 2\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalList *keys = node->next;
+
+    // add the elt from the first hashmap
+    // to the new one
+    // if the key is not in the removed
+    MalHashmap *new_hashmap = GC_MALLOC(sizeof(MalHashmap));
+    while (!is_empty(hashmap)) {
+        if (is_empty(hashmap->next)) {
+            printf("hashmap shouldnt be odd\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+
+        // check if key is in keys to be removed
+        // NOTE: confusing variable names
+        MalType *key = hashmap->data;
+        if (!IsString(key) && !IsKeyword(key)) {
+            printf("contains arg 2 (key) must be a string or a keyword\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+        char *key_string;
+        if (IsString(key)) {
+            key_string = GetString(key);
+        } else {
+            key_string = GetKeyword(key);
+        }
+        MalList *keys_copy            = keys;
+        int      should_continue_flag = 0;
+        while (keys_copy != NULL) {
+            MalType *key_copy = keys_copy->data;
+            if (!IsString(key_copy) && !IsKeyword(key_copy)) {
+                printf("contains arg 2 (key_copy) must be a string or a "
+                       "key_copyword\n");
+                global_error = NewMalList(node);
+                return NewMalNIL();
+            }
+            char *key_from_to_remove_list_string;
+            if (IsString(key_copy)) {
+                key_from_to_remove_list_string = GetString(key_copy);
+            } else {
+                key_from_to_remove_list_string = GetKeyword(key_copy);
+            }
+            if (strcmp(key_from_to_remove_list_string, key_string) == 0) {
+                hashmap              = hashmap->next->next;
+                should_continue_flag = 1;
+                break;
+            }
+
+            keys_copy = keys_copy->next;
+        }
+        if (should_continue_flag) {
+            continue;
+        }
+
+        append(new_hashmap, hashmap->data, sizeof(MalType));
+        append(new_hashmap, hashmap->next->data, sizeof(MalType));
+        hashmap = hashmap->next->next;
+    }
+
+    return NewMalHashmap(new_hashmap);
+}
 
 env_t *create_repl() {
 
@@ -1387,6 +1521,12 @@ env_t *create_repl() {
 
     // yes, hard coded.
     // why :'(
+    append(fn_ptr_list, NewMalCoreFn(dissoc), sizeof(MalType));
+    append(symbol_list, "dissoc", 6);
+
+    append(fn_ptr_list, NewMalCoreFn(assoc), sizeof(MalType));
+    append(symbol_list, "assoc", 5);
+
     append(fn_ptr_list, NewMalCoreFn(vals), sizeof(MalType));
     append(symbol_list, "vals", 4);
 

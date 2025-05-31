@@ -1296,9 +1296,7 @@ MalType *contains(MalList *node) {
     MalHashmap *hashmap_node = GetHashmap(hashmap);
     while (hashmap_node != NULL) {
         if (is_empty(hashmap_node->next)) {
-            printf("hashmap shouldnt be odd\n");
-            global_error = NewMalList(node);
-            return NewMalNIL();
+            return NewMalFalse();
         }
 
         MalType *current_key = hashmap_node->data;
@@ -1318,6 +1316,66 @@ MalType *contains(MalList *node) {
     // not found
     return NewMalNIL();
 }
+MalType *keys(MalList *node) {
+    if (is_empty(node)) {
+        printf("keys without args\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalType *hashmap = node->data;
+    if (!IsHashmap(hashmap)) {
+        printf("keys arg must be hashmap\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+
+    MalList *keys = GC_MALLOC(sizeof(MalList));
+
+    MalHashmap *hashmap_node = GetHashmap(hashmap);
+    while (hashmap_node != NULL) {
+        if (is_empty(hashmap_node->next)) {
+            printf("hashmap shouldnt be odd\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+
+        MalType *key = hashmap_node->data;
+        append(keys, key, sizeof(MalType));
+
+        hashmap_node = hashmap_node->next->next;
+    }
+    return NewMalList(keys);
+}
+MalType *vals(MalList *node) {
+    if (is_empty(node)) {
+        printf("vals without args\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+    MalType *hashmap = node->data;
+    if (!IsHashmap(hashmap)) {
+        printf("vals arg must be hashmap\n");
+        global_error = NewMalList(node);
+        return NewMalNIL();
+    }
+
+    MalList *vals = GC_MALLOC(sizeof(MalList));
+
+    MalHashmap *hashmap_node = GetHashmap(hashmap);
+    while (hashmap_node != NULL) {
+        if (is_empty(hashmap_node->next)) {
+            printf("hashmap shouldnt be odd\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+
+        MalType *val = hashmap_node->next->data;
+        append(vals, val, sizeof(MalType));
+
+        hashmap_node = hashmap_node->next->next;
+    }
+    return NewMalList(vals);
+}
 
 env_t *create_repl() {
 
@@ -1329,6 +1387,12 @@ env_t *create_repl() {
 
     // yes, hard coded.
     // why :'(
+    append(fn_ptr_list, NewMalCoreFn(vals), sizeof(MalType));
+    append(symbol_list, "vals", 4);
+
+    append(fn_ptr_list, NewMalCoreFn(keys), sizeof(MalType));
+    append(symbol_list, "keys", 4);
+
     append(fn_ptr_list, NewMalCoreFn(contains), sizeof(MalType));
     append(symbol_list, "contains?", 9);
 

@@ -26,7 +26,6 @@ char *pr_str(MalType *AST, int print_readably) {
         return string;
     }
     case MAL_KEYWORD: {
-        printf("reading kw '%s'\n", AST->value.KeywordValue);
         strcat(string, ":");
         strcat(string, AST->value.KeywordValue);
         return string;

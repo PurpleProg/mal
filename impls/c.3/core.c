@@ -1238,7 +1238,7 @@ MalType *get_hashmap(MalList *node) {
     }
 
     MalHashmap *hashmap_node = GetHashmap(hashmap);
-    while (hashmap_node != NULL) {
+    while (!is_empty(hashmap_node)) {
         if (is_empty(hashmap_node->next)) {
             printf("hashmap shouldnt be odd\n");
             global_error = NewMalList(node);
@@ -1266,25 +1266,25 @@ MalType *contains(MalList *node) {
     if (is_empty(node)) {
         printf("contains without args\n");
         global_error = NewMalList(node);
-        return NewMalNIL();
+        return NewMalFalse();
     }
     MalType *hashmap = node->data;
     if (!IsHashmap(hashmap)) {
         printf("contains arg must be hashmap\n");
         global_error = NewMalList(node);
-        return NewMalNIL();
+        return NewMalFalse();
     }
 
     if (is_empty(node->next)) {
         printf("contains without arg 2\n");
         global_error = NewMalList(node);
-        return NewMalNIL();
+        return NewMalFalse();
     }
     MalType *key = node->next->data;
     if (!IsString(key) && !IsKeyword(key)) {
         printf("contains arg 2 (key) must be a string or a keyword\n");
         global_error = NewMalList(node);
-        return NewMalNIL();
+        return NewMalFalse();
     }
     char *key_string;
     if (IsString(key)) {
@@ -1294,7 +1294,7 @@ MalType *contains(MalList *node) {
     }
 
     MalHashmap *hashmap_node = GetHashmap(hashmap);
-    while (hashmap_node != NULL) {
+    while (!is_empty(hashmap_node)) {
         if (is_empty(hashmap_node->next)) {
             return NewMalFalse();
         }
@@ -1314,7 +1314,7 @@ MalType *contains(MalList *node) {
         hashmap_node = hashmap_node->next->next;
     }
     // not found
-    return NewMalNIL();
+    return NewMalFalse();
 }
 MalType *keys(MalList *node) {
     if (is_empty(node)) {
@@ -1332,7 +1332,7 @@ MalType *keys(MalList *node) {
     MalList *keys = GC_MALLOC(sizeof(MalList));
 
     MalHashmap *hashmap_node = GetHashmap(hashmap);
-    while (hashmap_node != NULL) {
+    while (!is_empty(hashmap_node)) {
         if (is_empty(hashmap_node->next)) {
             printf("hashmap shouldnt be odd\n");
             global_error = NewMalList(node);
@@ -1362,7 +1362,7 @@ MalType *vals(MalList *node) {
     MalList *vals = GC_MALLOC(sizeof(MalList));
 
     MalHashmap *hashmap_node = GetHashmap(hashmap);
-    while (hashmap_node != NULL) {
+    while (!is_empty(hashmap_node)) {
         if (is_empty(hashmap_node->next)) {
             printf("hashmap shouldnt be odd\n");
             global_error = NewMalList(node);

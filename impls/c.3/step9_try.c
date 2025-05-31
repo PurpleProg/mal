@@ -214,6 +214,10 @@ MalType *READ(char *line) {
 
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
+        if (global_error != NULL) {
+            printf("error %s\n", pr_str(global_error, 0));
+        }
+
         // reset
         global_error = NULL;
 
@@ -486,6 +490,15 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     set(env, key, value);
 
                     return value;
+                }
+                // throw
+                if (strcmp(symbol, "throw") == 0) {
+                    if (element->next == NULL) {
+                        return NewMalNIL();
+                    }
+                    printf("error ");
+                    global_error = element->next->data;
+                    return element->next->data;
                 }
             }
 

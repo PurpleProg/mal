@@ -106,7 +106,6 @@ MalType *read_hashmap(reader_t *reader) {
 
         MalType *key = GC_malloc(sizeof(MalType));
         key          = read_form(reader);
-        printf("hashmap key : %s\n", pr_str(key, 0));
 
         // append the ret of read_form to the current hashmap
         // that is the key
@@ -135,7 +134,6 @@ MalType *read_hashmap(reader_t *reader) {
         MalType *value = GC_malloc(sizeof(MalType));
         value          = read_form(reader);
 
-        printf("hashmap value : %s\n", pr_str(value, 0));
         map_set(hashmap->value.HashmapValue, key, value);
 
         token = reader_next(reader);

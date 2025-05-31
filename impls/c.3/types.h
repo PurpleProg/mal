@@ -108,6 +108,7 @@ MalType *NewMalNIL();
 MalType *NewMalAtom(MalType *MalObject);
 MalType *NewMalCoreFn(MalType *(*function)(MalList *));
 MalType *NewMalFnWrapper(MalType *parameters, MalType *body, env_t *env);
+MalType *NewMalHashmap(MalHashmap *hashmap);
 
 int IsListOrVector(MalType *AST);
 int IsSymbol(MalType *AST);

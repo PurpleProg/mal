@@ -1144,7 +1144,7 @@ MalType *keyword(MalList *node) {
         char *string = GetString(node->data);
         return NewMalKeyword(string);
     }
-    // TODO: raise an error
+    global_error = NewMalList(node);
     return NewMalNIL();
 }
 MalType *vector(MalList *node) {
@@ -1157,6 +1157,43 @@ MalType *vector(MalList *node) {
     // NOTE: maybe something like ListCopy here ?
     return NewMalVector(node);
 }
+MalType *hashmap(MalList *node) {
+    /*
+    ** takes a variable but even number of arguments
+    ** and returns a new mal hash-map value
+    ** with keys from the odd arguments
+    ** and values from the even arguments respectively.
+    */
+    MalHashmap *hashmap = GC_MALLOC(sizeof(MalHashmap));
+    if (is_empty(node)) {
+        hashmap->next = NULL;
+        return NewMalHashmap(hashmap);
+    }
+
+    while (!is_empty(node)) {
+        if (is_empty(node->next)) {
+            printf("hashmap takes a even number of args\n");
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+
+        if (!IsString(node->data) && !IsKeyword(node->data)) {
+            printf("hashmap key can only be string or keyword, not %s\n",
+                   pr_str(node->data, 0));
+            global_error = NewMalList(node);
+            return NewMalNIL();
+        }
+        // key
+        append(hashmap, node->data, sizeof(MalType));
+
+        // value
+        append(hashmap, node->next->data, sizeof(MalType));
+
+        node = node->next->next;
+    }
+
+    return NewMalHashmap(hashmap);
+}
 
 env_t *create_repl() {
 
@@ -1168,6 +1205,9 @@ env_t *create_repl() {
 
     // yes, hard coded.
     // why :'(
+    append(fn_ptr_list, NewMalCoreFn(hashmap), sizeof(MalType));
+    append(symbol_list, "hash-map", 8);
+
     append(fn_ptr_list, NewMalCoreFn(map), sizeof(MalType));
     append(symbol_list, "map", 3);
 

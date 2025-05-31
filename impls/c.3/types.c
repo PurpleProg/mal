@@ -109,6 +109,12 @@ MalType *NewMalCoreFn(MalType *(*function)(MalList *)) {
     result->value.CoreFnValue = function;
     return result;
 }
+MalType *NewMalHashmap(MalHashmap *hashmap) {
+    MalType *result            = GC_MALLOC(sizeof(MalType));
+    result->type               = MAL_HASHMAP;
+    result->value.HashmapValue = hashmap;
+    return result;
+}
 
 int IsListOrVector(MalType *AST) {
     return AST->type == MAL_LIST || AST->type == MAL_VECTOR;

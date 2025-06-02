@@ -1419,11 +1419,15 @@ MalType *assoc(MalList *node) {
     }
 
     // add the elts from the args to the new hashmap
-    while (args != NULL) {
-        MalType *elt = args->data;
-        append(new_hashmap, elt, sizeof(MalType));
+    while (!is_empty(args)) {
+        if (is_empty(args->next)) {
+            printf("assoc odd\n");
+        }
+        MalType *key = args->data;
+        MalType *val = args->next->data;
+        map_set(new_hashmap, key, val);
 
-        args = args->next;
+        args = args->next->next;
     }
     return NewMalHashmap(new_hashmap);
 }

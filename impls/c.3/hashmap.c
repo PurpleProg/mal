@@ -63,11 +63,7 @@ void *map_get(map_t *map, MalType *key) {
 
 int map_contains(map_t *map, MalType *key) {
     node_t *current_node = map;
-    while (current_node != NULL) {
-        if (current_node->data == NULL) {
-            // the map is empty
-            return 0;
-        }
+    while (!is_empty(current_node)) {
         if (strcmp(GetStringValue(key), GetStringValue(current_node->data)) ==
             0) {
             return 1;

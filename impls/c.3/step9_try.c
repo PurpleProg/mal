@@ -815,9 +815,7 @@ char *rep(char *line, env_t *env) {
 
     if (global_error != NULL) {
         // append Uncaught error: to the current error
-        // TODO: use a wrapper function
-        // NOTE: should check it's a MalString or MalSymbol
-        char *eval_error = global_error->value.StringValue;
+        char *eval_error = pr_str(global_error, 0);
 
         char *err_str = GC_MALLOC(7 + strlen(eval_error));
         strcat(err_str, "error: ");

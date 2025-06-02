@@ -483,7 +483,9 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     if (is_empty(element->next->next)) {
                         return eval_a_ret;
                     }
+
                     MalType *form_catch_b_c = element->next->next->data;
+
                     if (!IsList(form_catch_b_c)) {
                         printf("try* catch block is not in a list\n");
                         global_error = form_catch_b_c;
@@ -510,9 +512,8 @@ MalType *EVAL(MalType *AST, env_t *env) {
                             return global_error;
                         }
 
-                        MalType *catch_symbol = list->data;
-                        MalType *form_b       = list->next->data;
-                        MalType *form_c       = list->next->next->data;
+                        MalType *form_b = list->next->data;
+                        MalType *form_c = list->next->next->data;
 
                         if (!IsSymbol(form_b)) {
                             printf("catch B must be a symbol\n");
@@ -792,7 +793,7 @@ char *PRINT(MalType *AST) {
 
 char *rep(char *line, env_t *env) {
     MalType *read     = READ(line);
-    MalType *eval_ret = EVAL(read, repl_env);
+    MalType *eval_ret = EVAL(read, env);
 
     if (global_error != NULL) {
         // append Uncaught error: to the current error

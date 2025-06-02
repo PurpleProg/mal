@@ -526,23 +526,43 @@ MalType *equal(MalList *node) {
         }
     }
     switch (arg1->type) {
-    case MAL_HASHMAP:
-        // fallback to list equality
-        // accesing ListValue instead of Hashmap value work here
-        // because bolth are typedef of node_t
-        eval_hashmap = 1;
+    case MAL_HASHMAP: {
+        MalHashmap *hashmap1 = GetHashmap(arg1);
+        MalHashmap *hashmap2 = GetHashmap(arg2);
+
+        while (!is_empty(hashmap1)) {
+            printf("= hashmap item\n");
+            if (is_empty(hashmap1)) {
+                printf("= on odd hashmap wtf\n");
+            }
+
+            MalType *key = hashmap1->data;
+            MalType *val = hashmap1->next->data;
+
+            if (!map_contains(hashmap2, key)) {
+                return NewMalFalse();
+            }
+
+            MalType *val2       = map_get(hashmap2, key);
+            MalList *equal_args = GC_MALLOC(sizeof(MalList));
+            append(equal_args, val, sizeof(MalType));
+            append(equal_args, val2, sizeof(MalType));
+            MalType *are_val_equal = equal(equal_args);
+
+            if (IsFalse(are_val_equal)) {
+                return NewMalFalse();
+            }
+
+            hashmap1 = hashmap1->next->next;
+        }
+
+        return NewMalTrue();
+    }
     case MAL_VECTOR:
         // fallback to list equality
     case MAL_LIST: {
-        MalList *node1;
-        MalList *node2;
-        if (eval_hashmap == 0) {
-            node1 = GetList(arg1);
-            node2 = GetList(arg2);
-        } else {
-            node1 = GetHashmap(arg1);
-            node2 = GetHashmap(arg2);
-        }
+        MalList *node1 = GetList(arg1);
+        MalList *node2 = GetList(arg2);
         while (node1 != NULL && node2 != NULL) {
             // if two elements are empty:
             if (node1->data == NULL && node2->data == NULL) {

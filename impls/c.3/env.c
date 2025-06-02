@@ -4,6 +4,7 @@
 #include "types.h"
 #include <gc/gc.h>
 #include <stdio.h>
+#include <string.h>
 
 int set(env_t *env, MalType *key, MalType *value) {
     return map_set(env->data, key, value);
@@ -15,9 +16,16 @@ MalType *get(env_t *env, MalType *key) {
         return get(env->outer, key);
     }
     if (ret == NULL && env->outer == NULL) {
-        global_error = key;
-        printf("'%s' not found.\n", pr_str(key, 0));
-        return key;
+        char *key_string = pr_str(key, 0);
+        char *string     = GC_MALLOC(strlen(key_string) + 12);
+
+        strcat(string, "'");
+        string = strcat(string, key_string);
+        strcat(string, "' not found");
+
+        // printf("get not found err : %s\n", string);
+        global_error = NewMalString(string);
+        return NULL;
     }
     return ret;
 }

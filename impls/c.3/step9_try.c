@@ -19,9 +19,6 @@ env_t *repl_env;
 // (so that it's global cause type.h is inclued everywere)
 MalType *global_error = NULL;
 
-// TODO:
-// fix def! assignement on error -> shouldn assigne, but does
-
 MalType *eval(node_t *node) {
     MalType *ast = node->data;
     return EVAL(ast, repl_env);
@@ -214,10 +211,6 @@ MalType *READ(char *line) {
 
 MalType *EVAL(MalType *AST, env_t *env) {
     while (1) {
-        if (global_error != NULL) {
-            printf("error %s\n", pr_str(global_error, 0));
-        }
-
         // reset
         global_error = NULL;
 
@@ -255,7 +248,15 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
             MalType *ret = get(env, NewMalString(symbol));
             if (ret == NULL) {
-                return NewMalNIL();
+                char *err_str = GC_MALLOC(strlen(symbol) + 2 + 10);
+                strcat(err_str, "'");
+                strcat(err_str, symbol);
+                strcat(err_str, "'");
+
+                strcat(err_str, " not found");
+
+                global_error = NewMalString(err_str);
+                return global_error;
             }
             return ret;
         }
@@ -491,14 +492,67 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
                     return value;
                 }
-                // throw
-                if (strcmp(symbol, "throw") == 0) {
-                    if (element->next == NULL) {
+                // try* / catch
+                if (strcmp(symbol, "try*") == 0) {
+                    if (is_empty(element->next)) {
                         return NewMalNIL();
                     }
-                    printf("error ");
-                    global_error = element->next->data;
-                    return element->next->data;
+                    if (is_empty(element->next->next)) {
+                        global_error = AST;
+                        return NewMalNIL();
+                    }
+                    MalType *form_a         = element->next->data;
+                    MalType *form_catch_b_c = element->next->next->data;
+                    MalType *eval_a_ret     = EVAL(form_a, env);
+                    if (!IsList(form_catch_b_c)) {
+                        printf("try* catch block is not in a list\n");
+                        global_error = form_catch_b_c;
+                        return global_error;
+                    }
+
+                    if (global_error != NULL) {
+                        // TODO: exeption handleing
+                        // (catch* B C)
+                        MalList *list = GetList(form_catch_b_c);
+                        if (is_empty(list)) {
+                            printf("empty catch block\n");
+                            global_error = AST;
+                            return global_error;
+                        }
+                        if (is_empty(list->next)) {
+                            printf("catch without B and C\n");
+                            global_error = AST;
+                            return global_error;
+                        }
+                        if (is_empty(list->next->next)) {
+                            printf("catch without C\n");
+                            global_error = AST;
+                            return global_error;
+                        }
+                        MalType *catch_symbol = list->data;
+                        MalType *form_b       = list->next->data;
+                        MalType *form_c       = list->next->next->data;
+
+                        if (!IsSymbol(form_b)) {
+                            printf("catch B must be a symbol\n");
+                            global_error = AST;
+                            return global_error;
+                        }
+
+                        MalList *binds = GC_MALLOC(sizeof(MalList));
+                        MalList *exprs = GC_MALLOC(sizeof(MalList));
+
+                        append(binds, form_b, sizeof(MalType));
+                        append(exprs, global_error, sizeof(MalType));
+
+                        env_t *new_env = create_env(env, NewMalList(binds),
+                                                    NewMalList(exprs));
+
+                        env = new_env;
+                        AST = form_c;
+                        continue;
+                    }
+                    return eval_a_ret;
                 }
             }
 
@@ -682,10 +736,9 @@ MalType *EVAL(MalType *AST, env_t *env) {
                 // evaluate each element in the current list and add them
                 while (element != NULL) {
                     MalType *evaluated_element = EVAL(element->data, env);
-                    if (global_error != NULL) {
-                        printf("eval core fn args failed\n");
-                        return NewMalNIL();
-                    }
+                    // if (global_error != NULL) {
+                    //     return NewMalNIL();
+                    // }
 
                     append(evaluated_list, (void *)evaluated_element,
                            sizeof(MalType));
@@ -757,5 +810,22 @@ char *PRINT(MalType *AST) {
 }
 
 char *rep(char *line, env_t *env) {
-    return PRINT(EVAL(READ(line), env));
+    MalType *read     = READ(line);
+    MalType *eval_ret = EVAL(read, repl_env);
+
+    if (global_error != NULL) {
+        // append Uncaught error: to the current error
+        // TODO: use a wrapper function
+        // NOTE: should check it's a MalString or MalSymbol
+        char *eval_error = global_error->value.StringValue;
+
+        char *err_str = GC_MALLOC(7 + strlen(eval_error));
+        strcat(err_str, "error: ");
+        strcat(err_str, eval_error);
+
+        global_error = NewMalSymbol(err_str);
+        printf("%s\n", pr_str(global_error, 0));
+    }
+
+    return PRINT(eval_ret);
 }

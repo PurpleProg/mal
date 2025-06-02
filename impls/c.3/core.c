@@ -453,8 +453,7 @@ MalType *nth(node_t *node) {
 
         list = list->next;
         if (is_empty(list)) {
-            printf("nth index out of range\n");
-            global_error = NewMalList(node);
+            global_error = NewMalString("nth index out of range");
             return nil;
         }
     }
@@ -809,6 +808,13 @@ MalType *map(MalList *node) {
     }
 
     return NewMalList(result);
+}
+MalType *throw(MalList *node) {
+    if (is_empty(node)) {
+        return NewMalNIL();
+    }
+    global_error = node->data;
+    return NewMalNIL();
 }
 
 // comparators
@@ -1521,6 +1527,9 @@ env_t *create_repl() {
 
     // yes, hard coded.
     // why :'(
+    append(fn_ptr_list, NewMalCoreFn(throw), sizeof(MalType));
+    append(symbol_list, "throw", 5);
+
     append(fn_ptr_list, NewMalCoreFn(dissoc), sizeof(MalType));
     append(symbol_list, "dissoc", 6);
 

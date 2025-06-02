@@ -235,14 +235,6 @@ MalType *EVAL(MalType *AST, env_t *env) {
 
             MalType *ret = get(env, NewMalString(symbol));
             if (ret == NULL) {
-                char *err_str = GC_MALLOC(strlen(symbol) + 2 + 10);
-                strcat(err_str, "'");
-                strcat(err_str, symbol);
-                strcat(err_str, "'");
-
-                strcat(err_str, " not found");
-
-                global_error = NewMalString(err_str);
                 return global_error;
             }
             return ret;
@@ -484,13 +476,14 @@ MalType *EVAL(MalType *AST, env_t *env) {
                     if (is_empty(element->next)) {
                         return NewMalNIL();
                     }
+                    MalType *form_a = element->next->data;
+
+                    MalType *eval_a_ret = EVAL(form_a, env);
+
                     if (is_empty(element->next->next)) {
-                        global_error = AST;
-                        return NewMalNIL();
+                        return eval_a_ret;
                     }
-                    MalType *form_a         = element->next->data;
                     MalType *form_catch_b_c = element->next->next->data;
-                    MalType *eval_a_ret     = EVAL(form_a, env);
                     if (!IsList(form_catch_b_c)) {
                         printf("try* catch block is not in a list\n");
                         global_error = form_catch_b_c;
@@ -516,6 +509,7 @@ MalType *EVAL(MalType *AST, env_t *env) {
                             global_error = AST;
                             return global_error;
                         }
+
                         MalType *catch_symbol = list->data;
                         MalType *form_b       = list->next->data;
                         MalType *form_c       = list->next->next->data;

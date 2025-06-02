@@ -233,19 +233,6 @@ MalType *EVAL(MalType *AST, env_t *env) {
             // and eval (true, false, nil)
             char *symbol = GetSymbol(AST);
 
-            // true
-            if (strcmp(symbol, "true") == 0) {
-                return NewMalTrue();
-            }
-            // false
-            if (strcmp(symbol, "false") == 0) {
-                return NewMalFalse();
-            }
-            // nil
-            if (strcmp(symbol, "nil") == 0) {
-                return NewMalNIL();
-            }
-
             MalType *ret = get(env, NewMalString(symbol));
             if (ret == NULL) {
                 char *err_str = GC_MALLOC(strlen(symbol) + 2 + 10);
